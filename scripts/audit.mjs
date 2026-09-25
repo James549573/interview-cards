@@ -250,7 +250,64 @@ console.log(`K/X 卡 <500字: ${shortKX.length}（其中截断嫌疑 ${thinKX.le
 for (const c of thinT1) add(`V2-t1-${c.id}`, 'V2 T1 卡内容不足', '高', c.id, `answerMarkdown 仅 ${c.answerMarkdown.length} 字`, '五段式补全', 'T2-FIX-03');
 for (const c of thinKX) add(`V2-kx-${c.id}`, 'V2 K/X 卡疑截断', '高', c.id, `卡 ${c.answerMarkdown.length} 字 << 素材源段 ${srcSectionLen(c.id)} 字`, '核对解析边界', 'T2-FIX-02');
 
+// ---------- V3：内容溯源与充足性 ----------
+
+// V3-R1: C 类污染检测——fullContent 含"通行实践/通常做法/常见反模式"等模型自带知识字样
+if (codesJson) {
+  const cWords = ['通行实践', '通常做法', '常见反模式', '业界通行', '一般来说'];
+  for (const c of Object.values(codesJson.codes)) {
+    for (const w of cWords) {
+      if ((c.fullContent || '').includes(w)) {
+        add('V3-cpollute-' + c.code, 'V3 C类污染', '高', c.code, `fullContent 含"${w}"（疑似模型自带知识混入）`, '移除或降级为"通行实践参考"并显式标注', 'F-01');
+      }
+    }
+  }
+}
+
+// V3-R2: 家族命名逃避检测——name 标"未展开"但素材中存在该编号的定义行（"编号 + 中文名"模式）
+if (codesJson) {
+  for (const c of Object.values(codesJson.codes)) {
+    if (!c.name || !/未展开|未单独/.test(c.name)) continue;
+    const code = c.code;
+    const defRe = new RegExp('(^|[^A-Za-z0-9-])' + code.replace(/[-]/g, '\\-') + '\\s*[-——:：\\s]\\s*[^，。；\\n]{4,}');
+    let found = null;
+    for (const [f, t] of Object.entries(texts)) {
+      for (const l of t.split('\n')) {
+        if (defRe.test(l) && !/^\|/.test(l.trim()) && !/T1-\d/.test(l)) { found = `${f}: ${l.trim().slice(0, 60)}`; break; }
+      }
+      if (found) break;
+    }
+    if (found) add('V3-family-' + code, 'V3 家族命名逃避', '高', code, `name 标"未展开"但素材存在疑似定义行：${found}`, '人工核对，是定义则映射为具体名称', 'F-02');
+  }
+}
+
+// V3-R3: 内容漏读检测——K/X 卡 answerMarkdown < 素材源段 80%
+for (const c of cards) {
+  if (!/^[KX]-/.test(c.id)) continue;
+  let srcLen = 0;
+  for (const t of Object.values(texts)) {
+    const m = t.match(new RegExp('^### ' + c.id + '[\\s\\S]*?(?=^### |^## |^# )', 'm'));
+    if (m) { srcLen = m[0].length; break; }
+  }
+  if (srcLen > 0 && c.answerMarkdown.length < srcLen * 0.8) {
+    add('V3-loss-' + c.id, 'V3 内容漏读', '高', c.id, `卡片 ${c.answerMarkdown.length} 字 < 素材源段 ${srcLen} 字的 80%`, '检查解析截断', 'F-03');
+  }
+}
+
 // ---------- 输出 ----------
+console.log('\n== V3 溯源核查 ==');
+{
+  const v3 = problems.filter((p) => p.dim.startsWith('V3'));
+  if (codesJson) {
+    const famCount = Object.values(codesJson.codes).filter((c) => c.name && /未展开|未单独/.test(c.name)).length;
+    const poolCount = Object.values(codesJson.codes).filter((c) => (c.fullContent || '').includes('主题池供参考')).length;
+    console.log('C 类污染（通行实践字样）:', problems.filter((p) => p.id.startsWith('V3-cpollute')).length);
+    console.log('家族命名逃避（素材有定义行但标未展开）:', problems.filter((p) => p.id.startsWith('V3-family')).length);
+    console.log('内容漏读（卡 < 源段 80%）:', problems.filter((p) => p.id.startsWith('V3-loss')).length);
+    console.log('诚实标注"未展开"的编号:', famCount, '| 其中已注入 M 线主题池:', poolCount);
+  }
+  if (!v3.length) console.log('V3 全部规则: 通过（0 问题）');
+}
 console.log('\n== 结构化问题数 ==', problems.length);
 const out = problems.length ? problems : [];
 fs.writeFileSync(path.join(ROOT, 'audit-problems.json'), JSON.stringify(out, null, 2));

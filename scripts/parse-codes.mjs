@@ -191,6 +191,16 @@ function contextFor(code) {
   return lines;
 }
 
+// M 线主题池：Prompt 管理线"核心"的 27 个分句（素材未提供 M1–M35 逐条对应，仅作无锚点条目的参考池）
+const mLinePool = (() => {
+  const t = texts['面试官Prompt_可直接复制.md'] || '';
+  const i = t.indexOf('管理 / 交付线（M1–M35）核心');
+  if (i === -1) return [];
+  const seg = t.slice(i, t.indexOf('\n\n', i));
+  const body = seg.split('**').filter(Boolean).pop();
+  return body.split('；').map((s) => s.trim()).filter((s) => s.length > 4);
+})();
+
 const PHRASE_CONTENT = buildPhraseContent(
   texts['面试官Prompt_可直接复制.md'],
   Object.entries(t1RowName).map(([id, v]) => ({ name: v.name, hook: v.hook }))
@@ -328,7 +338,20 @@ for (const rawCode of [...universe].sort()) {
     if (hooks.length) parts.push(`**关联卡记忆钩子**（素材原文）：\n${hooks.join('\n')}`);
   }
   if (proseLen < 100) {
-    parts.push(FAMILY_NOTE[cat] || `【素材未展开，以下是上下文推断】编号 ${code} 属于${cat}体系，素材中未出现其展开定义，仅在上述上下文/挂钩中出现。面试被问到时先回素材核对，不要引用推断内容作事实。`);
+    // M 线无锚点条目：注入 27 句主题池（诚实声明对应关系素材未提供），不用泛化家族模板
+    if (/^M\d{1,2}$/.test(code) && mLinePool.length) {
+      parts.push(
+        [
+          `【素材边界说明（V3 溯源）】素材的 M 线"核心"仅提供以下 ${mLinePool.length} 个主题分句，**未提供 M1–M35 的逐条编号对应**（分句顺序与编号不线性相关：如 M35 的实锚在 K-13"越权负样本 ≥50 条"，而非第 35 句）。因此本编号无法可靠映射到具体主题句，以下是完整主题池供参考；面试被问到时，请先说明你掌握的是有锚点的决策（如 M23 范围裁决 / M31 下钻边界 / M35 越权负样本），不要为无锚点编号编造对应。`,
+          '',
+          ...mLinePool.map((p, i) => `${i + 1}. ${p}`),
+          '',
+          '【有明确引用锚点的 M 编号】M0/M2（K-25）、M4/M5/M6（K-23）、M12（K-01）、M21（K-25/K-31）、M23（K-24）、M24/M25/M26（K-26）、M27（K-19/K-33）、M28（K-22）、M31（K-20）、M35（K-13）——这些编号的语义以挂钩卡为准。'
+        ].join('\n')
+      );
+    } else {
+      parts.push(FAMILY_NOTE[cat] || `【素材未展开，以下是上下文推断】编号 ${code} 属于${cat}体系，素材中未出现其展开定义，仅在上述上下文/挂钩中出现。面试被问到时先回素材核对，不要引用推断内容作事实。`);
+    }
   }
   fullContent = parts.join('\n\n');
 

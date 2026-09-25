@@ -448,6 +448,17 @@ function main() {
   }
 
   const factSource = fs.readFileSync(path.join(SRC_DIR, FILES[0]), 'utf8').replace(/\r\n?/g, '\n');
+  // 短卡源段字数表（K-29~33 / X-02~06 在素材中的原文长度，供素材说明引用）
+  const allSources = FILES.map((f) => path.join(SRC_DIR, f))
+    .filter((p) => fs.existsSync(p))
+    .map((p) => fs.readFileSync(p, 'utf8').replace(/\r\n?/g, '\n'));
+  const srcLenOf = (id) => {
+    for (const t of allSources) {
+      const m = t.match(new RegExp('^### ' + id + '[\\s\\S]*?(?=^### |^## |^# )', 'm'));
+      if (m) return m[0].length;
+    }
+    return 0;
+  };
   // Prompt 线互证内容（供 T1 挂钩注入实质内容）
   const promptText = fs.existsSync(path.join(SRC_DIR, '面试官Prompt_可直接复制.md'))
     ? fs.readFileSync(path.join(SRC_DIR, '面试官Prompt_可直接复制.md'), 'utf8').replace(/\r\n?/g, '\n')
@@ -498,7 +509,7 @@ function main() {
     const note = [
       ``,
       `---`,
-      `**素材说明**：本卡源段在素材中即此长度，以上为完整原文、无删减；本知识点素材未做更长展开。`,
+      `**素材说明（V3 逐行核查）**：本卡源段在素材中仅 ${srcLenOf(c.id)} 字（K-29~33 / X-02~06 在素材中即为短段落），以上正文为素材完整原文、逐行比对无删减；本知识点素材未做更长展开。`,
       rel.length ? `**关联卡**：${rel.join('、')}（相关决策线的完整五段式答案，可对照复习）。` : ''
     ]
       .filter(Boolean)
