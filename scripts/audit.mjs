@@ -221,6 +221,35 @@ for (const id of ['APP-A', 'APP-T', 'APP-F', 'APP-H']) {
 const noHook = cards.filter((c) => c.srs !== false && !c.memoryHook);
 console.log('B10 无钩子的 srs 卡:', noHook.map((c) => c.id).join(',') || '无');
 
+// ---------- V2: 内容充足性（T2-FIX-06） ----------
+console.log('\n== V2 内容充足性 ==');
+if (codesJson) {
+  const entries = Object.values(codesJson.codes);
+  const noName = entries.filter((e) => !e.name);
+  const thinSummary = entries.filter((e) => e.name && (e.summary || '').length < 30);
+  const thinFull = entries.filter((e) => (e.fullContent || '').length < 50);
+  console.log(`codes: 总 ${entries.length} | 无名称 ${noName.length} | summary<30字 ${thinSummary.length} | fullContent<50字 ${thinFull.length}`);
+  for (const e of noName) add(`V2-name-${e.code}`, 'V2 编号无名称', '高', `codes:${e.code}`, 'name 为空', '补命名', 'T2-FIX-01');
+  for (const e of thinSummary) add(`V2-sum-${e.code}`, 'V2 summary 过短', '中', `codes:${e.code}`, `summary 仅 ${(e.summary || '').length} 字`, '补到 ≥30 字', 'T2-FIX-02');
+  for (const e of thinFull) add(`V2-full-${e.code}`, 'V2 fullContent 过短', '高', `codes:${e.code}`, `fullContent 仅 ${(e.fullContent || '').length} 字`, '补到 ≥50 字', 'T2-FIX-02');
+}
+const thinT1 = cards.filter((c) => c.id.startsWith('T1-') && c.answerMarkdown.length < 200);
+// K/X 短卡：与素材源段长度对比——只有明显短于源段才算截断/丢失，素材本身短则记为受限短卡
+function srcSectionLen(id) {
+  for (const t of Object.values(texts)) {
+    const m = t.match(new RegExp('^### ' + id.replace('-', '\\-') + '[\\s\\S]*?(?=^### |^## )', 'm'));
+    if (m) return m[0].length;
+  }
+  return 0;
+}
+const shortKX = cards.filter((c) => /^[KX]-/.test(c.id) && c.answerMarkdown.length < 500);
+const thinKX = shortKX.filter((c) => c.answerMarkdown.length < srcSectionLen(c.id) - 150);
+const limitedKX = shortKX.filter((c) => !thinKX.includes(c));
+console.log(`T1 卡 <200字: ${thinT1.length}${thinT1.length ? ' → ' + thinT1.map((c) => c.id).join(',') : ''}`);
+console.log(`K/X 卡 <500字: ${shortKX.length}（其中截断嫌疑 ${thinKX.length}，素材受限短卡 ${limitedKX.length}: ${limitedKX.map((c) => c.id).join(',')}）`);
+for (const c of thinT1) add(`V2-t1-${c.id}`, 'V2 T1 卡内容不足', '高', c.id, `answerMarkdown 仅 ${c.answerMarkdown.length} 字`, '五段式补全', 'T2-FIX-03');
+for (const c of thinKX) add(`V2-kx-${c.id}`, 'V2 K/X 卡疑截断', '高', c.id, `卡 ${c.answerMarkdown.length} 字 << 素材源段 ${srcSectionLen(c.id)} 字`, '核对解析边界', 'T2-FIX-02');
+
 // ---------- 输出 ----------
 console.log('\n== 结构化问题数 ==', problems.length);
 const out = problems.length ? problems : [];

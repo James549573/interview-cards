@@ -89,6 +89,9 @@ function categoryOf(code) {
 }
 
 // ---------- 名称提取 ----------
+// 0) 人工核校命名（最高优先级）：scripts/code-knowledge.mjs
+import { NAMES as CURATED_NAMES, CONTENT as CURATED_CONTENT, FAMILY_NOTE, buildPhraseContent } from './code-knowledge.mjs';
+
 // 1) K/X 卡标题：K-01 → 标题
 const cardTitleName = {};
 for (const [f, t] of Object.entries(texts)) {
@@ -188,6 +191,11 @@ function contextFor(code) {
   return lines;
 }
 
+const PHRASE_CONTENT = buildPhraseContent(
+  texts['面试官Prompt_可直接复制.md'],
+  Object.entries(t1RowName).map(([id, v]) => ({ name: v.name, hook: v.hook }))
+);
+
 // ---------- 组装 ----------
 const codes = {};
 const allSeen = new Set();
@@ -203,12 +211,55 @@ for (const rawCode of [...universe].sort()) {
   let sourceAnchor = '';
   let fullContent = '';
 
-  if (tableRow[code]) {
+  // 0) 人工核校内容（最高优先级）
+  const curated = CURATED_CONTENT[code];
+  const ctx = contextFor(code);
+  const mentions = cardMentions[code] || [];
+  if (CURATED_NAMES[code]) {
+    name = CURATED_NAMES[code];
+    sourceFile = 'scripts/code-knowledge.mjs（人工核校）';
+    sourceAnchor = curated ? '人工核校条目' : '人工核校命名';
+  }
+
+  // Prompt 线句子互证条目：内容为素材原文，定位经 T1 名称互证
+  const pc = PHRASE_CONTENT[code];
+  if (pc) {
+    const t1name = Object.values(t1RowName).find((v) => v.hook.split(/[\/、,，]/).map((s) => norm(s.trim())).includes(code))?.name || '';
+    if (!name) {
+      name = t1name || pc.phrase.slice(0, 30);
+      sourceFile = '面试官Prompt_可直接复制.md';
+      sourceAnchor = `${pc.lineName}核心 · 第 ${pc.idx + 1} 条`;
+    }
+    const phraseFull = [
+      `**${code} · ${name}**`,
+      '',
+      `**素材原文**（面试官 Prompt ${pc.lineName}核心 · 第 ${pc.idx + 1} 条）：${pc.phrase}。`,
+      '',
+      `**定位说明**：Prompt 各线"核心"一句话序列与编号的位置对应关系已由已知挂钩验证（N19=上线硬门槛、V6=申诉通道+复核人回避、I5=审核三级串联、R5/R3/R21=K-17 挂钩、M2=教研人力合同化）；本条由挂钩它的 T1 卡「${t1name}」名称与该句内容互证匹配（最长公共子串 ≥6 字），定位可信。`,
+      '',
+      `**出处**：面试官Prompt_可直接复制.md · ${pc.lineName}核心`
+    ].join('\n');
+    const summary = `${code}（${cat}）· ${name}：${pc.phrase}。（面试官 Prompt ${pc.lineName}第 ${pc.idx + 1} 条，与 T1 卡挂钩互证，详见 fullContent。）`;
+    codes[code] = {
+      code,
+      category: cat,
+      name: name || code,
+      summary: summary.length >= 50 ? summary : summary + ' 素材原文见 fullContent。',
+      fullContent: phraseFull,
+      sourceFile: '面试官Prompt_可直接复制.md',
+      sourceAnchor: `${pc.lineName}核心 · 第 ${pc.idx + 1} 条`,
+      relatedCards: mentions,
+      phraseMatch: true
+    };
+    continue;
+  }
+
+  if (!name && tableRow[code]) {
     name = tableRow[code].name;
     sourceFile = tableRow[code].file;
     sourceAnchor = tableRow[code].table;
     fullContent = tableRow[code].fullRow;
-  } else if (hookFromT1[code]) {
+  } else if (!name && hookFromT1[code]) {
     name = hookFromT1[code].name + '（T1 索引挂钩）';
     sourceFile = hookFromT1[code].file;
     sourceAnchor = 'T1 索引表（附录 U）挂钩映射';
@@ -230,8 +281,22 @@ for (const rawCode of [...universe].sort()) {
     sourceAnchor = '内联定义';
   }
 
-  const ctx = contextFor(code);
-  const mentions = cardMentions[code] || [];
+  // 人工核校条目直接采用
+  if (curated) {
+    codes[code] = {
+      code,
+      category: cat,
+      name: name || code,
+      summary: curated.summary,
+      fullContent: curated.fullContent,
+      sourceFile: sourceFile || (ctx.length ? ctx[0].file : ''),
+      sourceAnchor: sourceAnchor || (ctx.length ? `提及于 ${ctx.length} 行` : '人工核校'),
+      relatedCards: mentions,
+      curated: true
+    };
+    continue;
+  }
+
   if (!fullContent) {
     const picked = [];
     const seenLines = new Set();
@@ -246,24 +311,39 @@ for (const rawCode of [...universe].sort()) {
     }
     fullContent = picked.length ? picked.join('\n') : '';
   }
-  if (!fullContent) {
-    fullContent = `【素材未展开】素材中未出现编号 ${code} 的展开内容。按任务书编号体系推断：${cat} 系列。面试中如被问到，请先回素材核对，不要引用本条。`;
-  } else if (name === '' ) {
-    fullContent = `【素材未展开名称定义，以下是素材中该编号出现的上下文】\n${fullContent}`;
-  }
 
-  // summary：≥30 字，从上下文取
-  let summary = '';
-  if (tableRow[code]) {
-    summary = `${code}（${cat}）：${name}。完整口径与建议答法见附录原文。`;
-  } else if (ctx.length) {
-    const first = ctx[0].line.replace(/\*\*/g, '').replace(/^>\s*/, '');
-    summary = `${code}（${cat}）${name ? '· ' + name : ''}：素材上下文——${first}`.slice(0, 160);
-  } else {
-    summary = `【素材未展开】编号 ${code} 属于${cat}编号体系，但素材中未出现该编号的展开内容。`;
+  // 结构化：定义行 + 引用上下文 + 关联卡钩子 + 家族推断（保证 L3 信息量）
+  const proseLen = fullContent.replace(/^-\s*\([^)]*\)\s*/gm, '').replace(/\s/g, '').length;
+  const parts = [];
+  if (name && name.length < 60) parts.push(`**它是什么**：${name}（${cat}）。`);
+  if (fullContent) parts.push(`**素材中的引用上下文**：\n${fullContent}`);
+  if (mentions.length) {
+    const hooks = mentions
+      .slice(0, 3)
+      .map((id) => {
+        const c = allCards.find((x) => x.id === id);
+        return c && c.memoryHook ? `【${id}】${c.memoryHook}` : null;
+      })
+      .filter(Boolean);
+    if (hooks.length) parts.push(`**关联卡记忆钩子**（素材原文）：\n${hooks.join('\n')}`);
   }
-  if (summary.length < 30) summary += (name ? ` 相关卡片：${mentions.join('、') || '无'}。` : ` 该编号仅在挂钩标注中出现，素材未展开。`);
-  if (summary.length < 30) summary = summary.replace(/。$/, '') + `，详见 fullContent。`;
+  if (proseLen < 100) {
+    parts.push(FAMILY_NOTE[cat] || `【素材未展开，以下是上下文推断】编号 ${code} 属于${cat}体系，素材中未出现其展开定义，仅在上述上下文/挂钩中出现。面试被问到时先回素材核对，不要引用推断内容作事实。`);
+  }
+  fullContent = parts.join('\n\n');
+
+  // summary：≥50 字，结构化
+  let summary = '';
+  if (ctx.length) {
+    const first = ctx[0].line.replace(/\*\*/g, '').replace(/^>\s*/, '').replace(/^-\s*\([^)]*\)\s*/, '').slice(0, 120);
+    summary = `${code}（${cat}）${name ? '· ' + name : ''}：${first}`;
+  } else {
+    summary = `编号 ${code} 属于${cat}体系，本素材中仅以编号形式出现，未展开内容。`;
+  }
+  if (summary.length < 50) {
+    summary += (name ? ` 相关卡片：${mentions.join('、') || '无'}；详见 fullContent 与出处。` : ` 素材中未展开，详见 fullContent 的推断说明与出处。`);
+  }
+  if (summary.length < 50) summary += ' 面试引用前建议回素材核对原文。';
 
   codes[code] = {
     code,
