@@ -8,3 +8,10 @@ source/
 # V4 verification evidence artifacts
 _verify-v4-output.txt
 _codes-v2.json
+
+# V5 展示层重构工作文件
+
+_SAMPLE-cards-current.txt
+_cards-prev.json
+SAMPLE10_V6.md
+SAMPLE_BEFORE_AFTER.md

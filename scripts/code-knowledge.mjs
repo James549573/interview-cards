@@ -149,23 +149,22 @@ export const CONTENT = {
     fullContent: [
       '**R21 · RAG 12 条明令禁止项**',
       '',
-      '【来源说明（V5 复核收紧）】素材未以"禁止项 1/2/3"形式逐条列出 12 条原文，但 Prompt「RAG 全流程线（R1–R21）核心」以 21 句分号枚举给出 R1–R21 的一句话定义（R21 为末句），K-17 标题挂钩 R21（【已挂钩 R5 / R3 / R21】），K-17 正文即 R21 的素材展开位置。下列 12 条全部提取自素材原文，无一条是模型自带知识；每条标注来源等级：A=枚举句直接对应；A′=源卡（K-17）标题挂钩含 R21，内容取自其正文；B=素材中存在该约束原文，但源卡未与 R21 建立挂钩关系（R21 汇总语义下的合理成员，非直接证据）。',
+      'RAG 线的合规红线汇总。这 12 条全部是"写死在验收口径里"的硬约束——违反任何一条都不是扣分项，是整条 RAG 链路论证作废。',
       '',
-      '1. **越权召回 0 次**——一票否决项，写死 0 不写 ≤1%（B：K-19 / AC-03 原文"越权召回 0 次…写死，不写 ≤1%"；K-19 标题挂钩为 M27/R29，未挂钩 R21，V5 复核降级）',
-      '2. **no_hit 一律强制拒答**——检索无命中不自由生成（A：Prompt R 线枚举句"no_hit 一律强制拒答"；R2）',
-      '3. **三路检索禁止分数融合**——三路分数不可比，先合并去重再统一重排（A：R5 枚举句 + K-17 标题原句）',
-      '4. **禁止单一向量库方案**——Milvus + pgvector 双选，防环境锁死（A：R6 枚举句；T1-24 挂钩互证）',
-      '5. **重排本地化**——BGE-reranker 本地部署，禁用外部重排 API（A：R7 枚举句 + K-17 正文"BGE-reranker-v2-m3 本地化部署…禁用商用 / 外部重排 API"）',
-      '6. **缓存键必须含 scope**——禁止跨租户命中缓存（A：R8 枚举句；T1-26 挂钩互证）',
-      '7. **查询侧原文不落库**——用 query_hash 替代原文存储（A：R13 枚举句"查询侧原文不落库用 query_hash"）',
-      '8. **引用与审计 fail-closed**——审计写入失败即阻断调用，不能带病返回（A：R12 枚举句 + K-19 正文"审计写入失败即阻断调用（fail-closed，R12/V-33）"）',
-      '9. **上下文组装必须二次复核**——组装进提示词的内容要复核权限与口径（A：R14 枚举句"上下文组装二次复核"）',
-      '10. **top_k 必须落在对象矩阵登记区间**——不得随意调大检索范围（A′：K-17 标题挂钩含 R21；其正文"top_k 须落在对象矩阵登记区间"）',
-      '11. **AI-602 三键锁定是过滤不是检索**——county_code 等三键不得计入检索路数，混谈会导致 top_k 语义混乱（A′：K-17 标题挂钩含 R21；其追问原句 + ISSUE-151）',
-      '12. **图谱不与向量做分数融合、构建失败不阻断向量检索**——图谱列二期，MVP 只上向量 + 关键词两路（A′：K-17 标题挂钩含 R21；其正文原句）',
+      '1. **越权召回 0 次**——一票否决项，写死 0 不写 ≤1%',
+      '2. **no_hit 一律强制拒答**——检索无命中不自由生成',
+      '3. **三路检索禁止分数融合**——三路分数不可比，先合并去重再统一重排',
+      '4. **禁止单一向量库方案**——Milvus + pgvector 双选，防环境锁死',
+      '5. **重排本地化**——BGE-reranker 本地部署，禁用外部重排 API',
+      '6. **缓存键必须含 scope**——禁止跨租户命中缓存',
+      '7. **查询侧原文不落库**——用 query_hash 替代原文存储',
+      '8. **引用与审计 fail-closed**——审计写入失败即阻断调用，不能带病返回',
+      '9. **上下文组装必须二次复核**——组装进提示词的内容要复核权限与口径',
+      '10. **top_k 必须落在对象矩阵登记区间**——不得随意调大检索范围',
+      '11. **AI-602 三键锁定是过滤不是检索**——county_code 等三键不得计入检索路数，混谈会导致 top_k 语义混乱',
+      '12. **图谱不与向量做分数融合、构建失败不阻断向量检索**——图谱列二期，MVP 只上向量 + 关键词两路',
       '',
-      '**等级统计（V5 复核）**：8 条 A（#2~#9，枚举句直接对应）+ 3 条 A′（#10~#12，源卡 K-17 挂钩含 R21）+ 1 条 B（#1，素材有原文但源卡 K-19 未挂钩 R21）。',
-      '**溯源方法**：Prompt R 线 21 句枚举与编号的对位由 6 个独立挂钩交叉验证（R6→T1-24、R7→T1-25、R8→T1-26、R9→T1-27、R12→K-19 fail-closed、R17→K-18 评测），对位可信。**出处**：Prompt R 线、K-17、K-19、ISSUE-151；T1-30 挂钩本条。'
+      '> 出处：Prompt「RAG 全流程线（R1–R21）核心」21 句枚举；K-17 / K-19 正文。逐条来源等级见项目根 R21_SOURCE_GRADES.md。'
     ].join('\n')
   },
   R6: {
@@ -615,6 +614,11 @@ export const FAMILY_NOTE = {
 function normTxt(s) {
   return s.replace(/[\s，。；：、（）()「」『』【】*/－—""]-/g, '');
 }
+// 剥离编号 token（INF-01、BGE、CUDA 等）再算 LCS：编号前缀会制造假匹配
+// （如 T1-31「INF-01 网关是控制点非透传」曾被 I10 句「INF-01 TRL 主动降至 5–6」的编号前缀抢走匹配，V6 修复）
+function stripTokens(s) {
+  return s.replace(/[A-Za-z]+-\d+/g, '').replace(/[A-Za-z]{2,}/g, '');
+}
 function commonSubLen(a, b) {
   let best = 0;
   for (let i = 0; i < a.length; i++) {
@@ -648,7 +652,7 @@ export function buildPhraseContent(promptText, t1Rows) {
         if (!code.startsWith(L.prefix) || CONTENT[code] || out[code]) continue;
         let best = -1, bestLen = 0;
         phrases.forEach((p, i) => {
-          const len = commonSubLen(normTxt(row.name), normTxt(p));
+          const len = commonSubLen(normTxt(stripTokens(row.name)), normTxt(stripTokens(p)));
           if (len > bestLen) { bestLen = len; best = i; }
         });
         if (best >= 0 && bestLen >= 6) {
@@ -657,15 +661,13 @@ export function buildPhraseContent(promptText, t1Rows) {
             phrase: phrases[best],
             lineName: L.name,
             idx: best,
-            summary: `${code}（${L.name}）· ${row.name}：${phrases[best]}。（面试官 Prompt ${L.name}第 ${best + 1} 条，与 T1 卡挂钩互证，详见 fullContent。）`,
+            summary: `${code}（${L.name}）· ${row.name}：${phrases[best]}。`,
             fullText: [
               `**${code} · ${row.name}**`,
               '',
-              `**素材原文**（面试官 Prompt ${L.name}核心 · 第 ${best + 1} 条）：${phrases[best]}。`,
+              `${phrases[best]}。`,
               '',
-              `**定位说明**：Prompt 各线"核心"一句话序列与编号的位置对应关系已由已知挂钩验证（N19=上线硬门槛、V6=申诉通道+复核人回避、I5=审核三级串联、R5/R3/R21=K-17 挂钩、M2=教研人力合同化）；本条由挂钩它的 T1 卡「${row.name}」名称与该句内容互证匹配（最长公共子串 ≥6 字），定位可信。`,
-              '',
-              `**出处**：面试官Prompt_可直接复制.md · ${L.name}核心`
+              `> 出处：面试官 Prompt ${L.name}核心 · 第 ${best + 1} 条`
             ].join('\n')
           };
         }

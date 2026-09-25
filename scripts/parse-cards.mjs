@@ -13,6 +13,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { CONTENT as CODE_CONTENT, buildPhraseContent } from './code-knowledge.mjs';
+import { T1_CONTENT } from './t1-knowledge.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const DEFAULT_DIR = 'C:\\Users\\admin\\WorkBuddy\\2026-09-24-22-32-06\\outputs\\interview_prep';
@@ -214,7 +215,7 @@ function sliceSectionAt(text, startMatch) {
   return next === -1 ? text.slice(start) : text.slice(start, start + 1 + next);
 }
 
-function parseT1Index(text, hookMap, phraseMap = {}) {
+function parseT1Index(text, hookMap, phraseMap = {}, bodyMention = {}) {
   const m = text.match(/^## 附录 U/m);
   if (!m) return [];
   const section = sliceSectionAt(text, m);
@@ -232,95 +233,114 @@ function parseT1Index(text, hookMap, phraseMap = {}) {
     let s;
     while ((s = re.exec(axis))) if (!stars.includes(s[1])) stars.push(s[1]);
 
-    // 通过挂钩编号找到关联的 K/X 卡
+    // 关联卡 = 标题挂钩映射 ∪ K 卡正文引用映射（如 I2 在 K-21 追问原文中被引用）
     const hookCodes = hook === '见原表' ? [] : hook.split(/[\/、,，]/).map((x) => x.trim());
     const relatedIds = [];
-    for (const h of hookCodes) for (const cid of hookMap[h] || []) if (!relatedIds.includes(cid)) relatedIds.push(cid);
+    for (const h of hookCodes) {
+      for (const cid of hookMap[h] || []) if (!relatedIds.includes(cid)) relatedIds.push(cid);
+      for (const cid of bodyMention[h] || []) if (!relatedIds.includes(cid)) relatedIds.push(cid);
+    }
     const relatedCards = relatedIds.map((id) => hookMap.__cards[id]).filter(Boolean);
 
-    // 一句话说明（≥50 字）：名称 + 挂钩线 + 关联卡
-    const hookStr = hookCodes.join(' / ') || '（无挂钩）';
-    const relStr = relatedIds.length ? relatedIds.join('、') : '暂无';
+    // ---- 展示层四段（V6 重构）：只讲知识，不讲解析 ----
+    // curated 优先（人工核校内容）；否则自动组装：挂钩句 + 关联卡摘录。
+    // 硬约束：内容不足时不允许用推断填满——只出"它是什么"段 + 关联，不编造。
+    const cur = T1_CONTENT[idCell];
+    const parts = [`**知识点**：${name}`];
+    if (relatedIds.length) parts[0] += ` ｜ **关联卡**：${relatedIds.join('、')}`;
+    parts.push('', '## 它是什么');
 
-    // ---- 五段式内容（T2-FIX-03）----
-    // 段1 它是什么（≥80 字）
-    const relTitles = relatedCards.map((c) => `${c.id}（${c.title.slice(0, 40)}）`).join('、');
-    let what = `${name}。该知识点属于 T1 档（精简复习），通过挂钩 ${hookStr} 挂靠项目决策线，岗位轴为「${axis.replace(/★/g, '')}」。`;
-    if (relTitles) what += `项目中的承载卡：${relTitles}。`;
-    if (what.length < 80) what += '此条为 T1 索引表（附录 U）登记行，展开内容以关联卡为准。';
-
-    // 段2 为什么重要 / 面试会怎么问（≥80 字）：关联卡记忆钩子 + 素材追问条目
-    const hookLines = relatedCards.map((c) => `【${c.id}】${c.memoryHook || c.title}`).filter((x) => x.length > 8);
-    const followUps = relatedCards.flatMap((c) => (c.questions || []).slice(1, 3).map((q) => `「${q}」→ ${c.id}`)).slice(0, 4);
-    let why = '';
-    if (hookLines.length) why += `为什么重要（关联卡记忆钩子，素材原文）：${hookLines.join('；')}。`;
-    if (followUps.length) why += `面试会怎么问（素材追问条目）：${followUps.join('；')}。`;
-    if (why.length < 80) why += `本条是面试考察的 T1 档知识点，复习时先过关联卡 ${relStr} 的完整五段式，再回到本条做快速自测。`;
-
-    // 段3 具体做法 / 关键约束（≥100 字）：从关联卡正文提取含挂钩编号的段落与约束段
-    const excerpts = [];
-    const seenEx = new Set();
-    for (const c of relatedCards.slice(0, 2)) {
-      if (!c.answerMarkdown) continue;
-      const paras = c.answerMarkdown.split(/\n\s*\n/).map((s) => s.trim()).filter(Boolean);
-      const pick = (p) => {
-        const t = p.replace(/^【[^】]+】\*\*/, '').replace(/^【[^】]+】/, '').replace(/^>\s*/g, '').replace(/\*\*/g, '').replace(/\s+/g, ' ').slice(0, 260);
-        if (t.length > 40 && !seenEx.has(t.slice(0, 30))) {
-          seenEx.add(t.slice(0, 30));
-          excerpts.push(`- （${c.id}）${t}`);
+    if (cur && cur.what) {
+      parts.push(cur.what);
+    } else {
+      // 挂钩句本身（真实素材句），或从人工核校 fullContent 提取首个实质段
+      let sentence = '';
+      const ph = hookCodes.map((h) => phraseMap[h]).find(Boolean);
+      if (ph) sentence = ph.phrase;
+      if (!sentence) {
+        for (const h of hookCodes) {
+          const cc = CODE_CONTENT[h];
+          if (!cc || !cc.fullContent) continue;
+          const para = cc.fullContent
+            .split('\n')
+            .map((x) => x.trim())
+            .find((x) => x && !x.startsWith(`**${h}`) && !x.startsWith('>') && !/^\d+\. /.test(x));
+          if (para) { sentence = para; break; }
         }
-      };
-      for (const tag of ['【当时约束】', '【选择与取舍】']) {
-        for (const p of paras) if (p.replace(/\*\*/g, '').startsWith(tag)) pick(p);
       }
-      for (const p of paras) {
-        if (excerpts.length >= 3) break;
-        if (!p.startsWith('【') && !p.startsWith('#') && !p.startsWith('|') && !p.startsWith('>') && hookCodes.some((h) => p.includes(h))) pick(p);
+      if (sentence) {
+        // 名称与挂钩句去重：完全相同或高相似（词序差异/个别词差异）→ 只出信息量大的一个
+        const strip = (x) => x.replace(/[\s，。；、（）()/]/g, '');
+        const nN = strip(name), nS = strip(sentence);
+        const lcs = (a, b) => {
+          let best = 0;
+          for (let i = 0; i < a.length; i++)
+            for (let j = 0; j < b.length; j++) {
+              let k = 0;
+              while (i + k < a.length && j + k < b.length && a[i + k] === b[j + k]) k++;
+              if (k > best) best = k;
+            }
+          return best;
+        };
+        const sim = lcs(nN, nS) / Math.max(nN.length, nS.length);
+        if (nS === nN || sim >= 0.55) {
+          parts.push(nS.length >= nN.length ? (sentence.endsWith('。') ? sentence : `${sentence}。`) : `${name}。`);
+        } else {
+          parts.push(`${name}——${sentence.replace(/。$/, '')}。`);
+        }
+      } else {
+        parts.push(`${name}。`);
       }
     }
-    // 挂钩编号带有人工核校/互证内容的（如 R21/R6/N19），整段注入
-    const curatedBlocks = [];
-    for (const h of hookCodes) {
-      const cc = CODE_CONTENT[h];
-      const ph = phraseMap[h];
-      const text = cc && cc.fullContent && cc.fullContent.length > 200 ? cc.fullContent : ph && ph.fullText;
-      if (text && text.length > 150) {
-        curatedBlocks.push(`**关键约束（据挂钩 ${h}）**：\n${text}`);
+
+    // 为什么这么做：curated 或关联卡【选择与取舍】+【不这么选会怎样】摘录；无 → 整段跳过
+    const whyParts = [];
+    if (cur && cur.why) {
+      whyParts.push(cur.why);
+    } else {
+      const seenEx = new Set();
+      for (const c of relatedCards.slice(0, 2)) {
+        if (!c.answerMarkdown) continue;
+        const paras = c.answerMarkdown.split(/\n\s*\n/).map((x) => x.trim()).filter(Boolean);
+        for (const tag of ['【选择与取舍】', '【不这么选会怎样】']) {
+          const p = paras.find((x) => x.replace(/\*\*/g, '').startsWith(tag));
+          if (!p) continue;
+          const t = p.replace(/^【[^】]+】\*\*/, '').replace(/^【[^】]+】/, '').replace(/\s+/g, ' ').slice(0, 220);
+          if (t.length > 30 && !seenEx.has(t.slice(0, 20))) {
+            seenEx.add(t.slice(0, 20));
+            whyParts.push(`- （${c.id}）${t}`);
+          }
+        }
+        if (whyParts.length >= 3) break;
       }
     }
-    let how = excerpts.length ? `具体做法 / 关键约束（摘自关联卡正文，素材原文）：\n${excerpts.join('\n')}` : '';
-    if (how.replace(/\s/g, '').length < 100) {
-      how += `${how ? '\n' : ''}【素材未展开本条的单独做法段】T1 索引表仅登记名称与挂钩；具体做法与关键约束请打开关联卡 ${relStr} 查看完整五段式答案（含【项目位置】【当时约束】【选择与取舍】）。`;
+    if (whyParts.length) parts.push('', '## 为什么这么做', whyParts.join('\n'));
+
+    // 面试会怎么问：curated 或关联卡追问条目；无 → 整段跳过
+    const qs = cur && cur.questions ? cur.questions : relatedCards.flatMap((c) => (c.questions || []).slice(1, 4).map((q) => `${q}（→ ${c.id}）`)).slice(0, 5);
+    if (qs.length) parts.push('', '## 面试会怎么问', ...qs.map((q, i) => `${i + 1}. ${q}`));
+
+    // 关联的完整决策：有关联才出段，不写"暂无"
+    if (relatedIds.length) {
+      const relTitles = relatedCards.map((c) => `- **${c.id}** ${c.title}`).join('\n');
+      parts.push('', '## 关联的完整决策', relTitles);
     }
+
+    // 出处：末尾引用块一行（引用块是允许形式），不进正文
+    const curNote = cur && cur.sourceNote ? `\n\n> 出处：${cur.sourceNote}` : '';
+    const phLine = hookCodes.map((h) => phraseMap[h]).find(Boolean);
+    const srcBlock = curNote || (phLine ? `\n\n> 出处：面试官 Prompt ${phLine.lineName}核心` : '');
+
+    const answerMarkdown =
+      parts.join('\n').trim() + srcBlock + '\n';
 
     cards.push({
       id: idCell,
       chapter: 't1index',
       title: name,
       questions: [name],
-      answerMarkdown: [
-        `**知识点**：${name} ｜ **挂钩**：${hook} ｜ **岗位轴**：${axis}`,
-        ``,
-        `## 它是什么`,
-        what,
-        ``,
-        `## 为什么重要 / 面试会怎么问`,
-        why,
-        ``,
-        `## 具体做法 / 关键约束`,
-        how,
-        ...curatedBlocks.map((b) => `\n${b}`),
-        ``,
-        `## 关联跳转`,
-        relatedIds.length
-          ? `关联卡：${relatedIds.join('、')}（浏览模式点击可展开完整答案）`
-          : hookCodes.length
-            ? `挂钩 ${hookStr} 在 K 卡体系无独立承载卡；实质内容见上方「关键约束」段，原始登记见附录 U 原表。`
-            : '（本条无挂钩，见附录 U 原表）'
-      ]
-        .join('\n')
-        .trim(),
-      memoryHook: hookLines.length ? hookLines[0].replace(/^【[^】]+】/, '') : '',
+      answerMarkdown,
+      memoryHook: name,
       tags: ['T1', ...stars],
       source: hook === '见原表' ? '' : hook,
       redline: false,
@@ -383,7 +403,7 @@ function buildTensionNotes(text) {
   // 附录 T：| T-06 | 张力点 | 两方口径 | 建议答法 |
   let m; const reT = /^\|\s*\*{0,2}(T-\d{2})\*{0,2}\s*\|\s*([^|]+)\|\s*([^|]+)\|\s*([^|]+)\|/gm;
   while ((m = reT.exec(text))) {
-    notes[m[1]] = `> ⚠ **关联张力 ${m[1]}**（附录 T · 内部张力清单，标注于卡片末尾，非答案原文）\n> **${m[2].trim()}**：${m[3].trim()}。\n> **建议答法**：${m[4].trim()}`;
+    notes[m[1]] = `> ⚠ **${m[2].trim()}（张力 ${m[1]}）**：${m[3].trim()}。\n> **建议答法**：${m[4].trim()}`;
   }
   // 附录 H：| C15 | 情形 | 处置 | 需确认 |
   const reC = /^\|\s*\*{0,2}(C\d{1,2})\*{0,2}\s*\|\s*([^|]+)\|\s*([^|]+)\|\s*([^|]+)\|/gm;
@@ -470,7 +490,21 @@ function main() {
     while ((m = re.exec(factSource))) t1RowsScan.push({ name: m[2].trim().replace(/\*\*/g, ''), hook: m[3].trim() });
   }
   const PHRASE = buildPhraseContent(promptText, t1RowsScan);
-  const t1 = parseT1Index(factSource, hookMap, PHRASE);
+  // K 卡正文引用映射：挂钩编号出现在 K 卡正文（非标题挂钩行）→ 该 K 卡可作 T1 的关联卡
+  const bodyMention = {};
+  {
+    const hookUniverse = new Set();
+    for (const row of t1RowsScan) for (const h of row.hook.split(/[\/、,，]/).map((s) => s.trim())) if (/^(R|N|V|I|M)\d{1,2}$/.test(h)) hookUniverse.add(h);
+    for (const c of seen.values()) {
+      if (!c.id.startsWith('K-')) continue;
+      const body = (c.answerMarkdown || '').replace(/【已挂钩[^\]]*】/g, '');
+      if (!body) continue;
+      for (const h of hookUniverse) {
+        if (new RegExp('(?<![A-Za-z0-9-])' + h + '(?![0-9])').test(body)) (bodyMention[h] = bodyMention[h] || []).push(c.id);
+      }
+    }
+  }
+  const t1 = parseT1Index(factSource, hookMap, PHRASE, bodyMention);
   const appendix = parseAppendices(factSource);
   for (const c of appendix) c.source = `附录与补充.md · ${c.title}（参考卡，不参与调度）`;
   for (const c of [...t1, ...appendix]) if (!seen.has(c.id)) seen.set(c.id, c);
@@ -502,21 +536,15 @@ function main() {
     if (rel.size) c.related = [...rel].slice(0, 4);
   }
 
-  // ---- V2: 短卡素材说明（素材本身短的卡：补关联跳转与完整性说明，不编造内容） ----
+  // ---- V6 展示层重构：短卡不再追加"素材说明（V3 逐行核查）"审核痕迹 ----
+  // 素材字数信息迁 TRACE_REPORT.md；只保留干净的关联卡指引（有 related 时）
   for (const c of seen.values()) {
     if (!/^[KX]-/.test(c.id) || (c.answerMarkdown || '').length >= 500) continue;
     const rel = c.related || [];
-    const note = [
-      ``,
-      `---`,
-      `**素材说明（V3 逐行核查）**：本卡源段在素材中仅 ${srcLenOf(c.id)} 字（K-29~33 / X-02~06 在素材中即为短段落），以上正文为素材完整原文、逐行比对无删减；本知识点素材未做更长展开。`,
-      rel.length ? `**关联卡**：${rel.join('、')}（相关决策线的完整五段式答案，可对照复习）。` : ''
-    ]
-      .filter(Boolean)
-      .join('\n');
+    if (!rel.length) continue;
     // V5 修复（F-05）：素材段拼接时钩子行与 --- 分隔线粘连（"自述。**---"），补空行恢复分隔
     c.answerMarkdown = c.answerMarkdown.replace(/([^\n])---/g, '$1\n\n---');
-    c.answerMarkdown += note;
+    c.answerMarkdown += `\n\n---\n\n**关联卡**：${rel.join('、')}`;
   }
 
   // ---- G39/G40: 张力与待确认标注（追加引用块，不改原文） ----

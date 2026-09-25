@@ -105,10 +105,10 @@ for (const id of cardK) if (!matK.has(id)) add(`B12-${id}`, 'B12 卡有素材没
 for (const id of matT1) if (!cardT1.has(id)) add(`B11-${id}`, 'B11 T1 缺失', '中', id, '素材 T1 表行存在但卡片缺失', '补卡', 'T-FIX-04');
 console.log('素材 K/X 卡数:', matK.size, '| cards.json:', cardK.size, '| 素材 T1 行数:', matT1.size, '| T1 卡:', cardT1.size);
 
-// ---------- B13: T1 空洞 ----------
+// ---------- B13: T1 空洞（V6 展示层重构后阈值与 V2-t1 对齐：精简卡为合规形态，只防真空卡） ----------
 const t1Cards = cards.filter((c) => c.id.startsWith('T1-'));
-const hollowT1 = t1Cards.filter((c) => c.answerMarkdown.length < 120);
-console.log('T1 卡总数:', t1Cards.length, '| 内容<120字符的空洞卡:', hollowT1.length);
+const hollowT1 = t1Cards.filter((c) => c.answerMarkdown.length < 45);
+console.log('T1 卡总数:', t1Cards.length, '| 真空卡(<45字):', hollowT1.length);
 if (hollowT1.length) add('B13-T1', 'B13 T1 内容空洞', '高', hollowT1.map((c) => c.id).slice(0, 5).join(',') + ` 等${hollowT1.length}张`, 'T1 卡只有编号+名称+岗位轴', 'T-FIX-03 补全', 'T-FIX-03');
 if (t1Cards.some((c) => c.srs !== false)) add('B-srs-T1', 'T1 进调度', '中', 'T1-*', 'T1 卡参与了 SRS（任务书要求 srs:false）', '置 srs:false', 'T-FIX-03');
 
@@ -233,7 +233,9 @@ if (codesJson) {
   for (const e of thinSummary) add(`V2-sum-${e.code}`, 'V2 summary 过短', '中', `codes:${e.code}`, `summary 仅 ${(e.summary || '').length} 字`, '补到 ≥30 字', 'T2-FIX-02');
   for (const e of thinFull) add(`V2-full-${e.code}`, 'V2 fullContent 过短', '高', `codes:${e.code}`, `fullContent 仅 ${(e.fullContent || '').length} 字`, '补到 ≥50 字', 'T2-FIX-02');
 }
-const thinT1 = cards.filter((c) => c.id.startsWith('T1-') && c.answerMarkdown.length < 200);
+// V6 展示层重构后：T1 卡分"四段卡"与"精简卡"（素材只有枚举句时只出它是什么，硬约束），
+// 精简卡最短约 50 字。此处只防"几乎无内容"的真空卡（<45 字），内容充足性由 V6-empty/V6-R3 接管。
+const thinT1 = cards.filter((c) => c.id.startsWith('T1-') && c.answerMarkdown.length < 45);
 // K/X 短卡：与素材源段长度对比——只有明显短于源段才算截断/丢失，素材本身短则记为受限短卡
 function srcSectionLen(id) {
   for (const t of Object.values(texts)) {
@@ -365,6 +367,80 @@ if (codesJson) {
   console.log('过度填充（>800 字且标未展开）:', problems.filter((p) => p.id.startsWith('V5-stuff')).length);
   console.log('A′ 挂钩不成立:', problems.filter((p) => p.id.startsWith('V5-aprime')).length);
   if (!v5.length) console.log('V5 全部规则: 通过（0 问题）');
+}
+
+// ---------- V6 展示层净化（卡片是给用户看的，不是给审核者看的） ----------
+console.log('\n== V6 展示层净化 ==');
+{
+  // V6-R1: 卡片正文禁词（审核痕迹泄漏）
+  const FORBIDDEN = [
+    ['定位说明', '审核证据'],
+    ['最长公共子串', '审核证据'],
+    ['互证匹配', '审核证据'],
+    ['定位可信', '审核证据'],
+    ['该知识点属于', '元数据'],
+    ['T1 索引表', '元数据'],
+    ['登记行', '元数据'],
+    ['关联卡 暂无', '元数据'],
+    ['素材未展开本条', '审核结论'],
+    ['无独立承载卡', '审核结论'],
+    ['附录 U 原表', '审核结论'],
+    ['素材说明（V3', '审核结论'],
+    ['逐行比对无删减', '审核结论'],
+    ['复习时先过关联卡', '元数据'],
+    ['**素材原文**', '出处段'],
+    ['**出处**', '出处段'],
+    ['关键约束（据挂钩', '元数据'],
+    ['来源说明（V5', '审核证据'],
+    ['等级统计', '审核证据']
+  ];
+  if (cardsData && cardsData.cards) {
+    for (const c of cardsData.cards) {
+      const body = c.answerMarkdown || '';
+      for (const [pat, kind] of FORBIDDEN) {
+        if (body.includes(pat)) {
+          add('V6-trace-' + c.id, 'V6 审核痕迹泄漏', '高', c.id, `卡片正文出现"${pat}"（${kind}）`, '移除，审核证据迁 TRACE_REPORT', '展示层重构');
+        }
+      }
+    }
+    // V6-R2: T1 卡必须有实质"它是什么"段（≥40 字，防止只剩名称空卡）
+    // V6-R2: T1 卡防空段。"它是什么"是素材句本身时可以很短（如"行级隔离谓词网关注入"），
+    // <8 字说明只剩标点或空段，才是真问题
+    for (const c of cardsData.cards) {
+      if (!c.id.startsWith('T1-')) continue;
+      const m = (c.answerMarkdown || '').match(/## 它是什么\n([\s\S]*?)(\n## |\n> |$)/);
+      const len = m ? m[1].trim().length : 0;
+      if (len < 8) {
+        add('V6-empty-' + c.id, 'V6 T1 卡内容不足', '中', c.id, `"它是什么"段仅 ${len} 字`, '补挂钩句或关联卡摘录，不允许编造', '展示层重构');
+      }
+      // V6-R3: T1 卡禁止整段"上下文推断"填满四段（硬约束：推断只允许"为什么这么做"正文段声明一次，
+      // 引用块（> 出处：…）中的来源声明不算）
+      const inferCount = (c.answerMarkdown || '')
+        .split('\n')
+        .filter((l) => !l.startsWith('>'))
+        .join('\n').match(/上下文推断/g);
+      if (inferCount && inferCount.length > 1) {
+        add('V6-infer-' + c.id, 'V6 推断填充过量', '中', c.id, `正文出现 ${inferCount.length} 处"上下文推断"（疑似用推断填满多段）`, '只允许"为什么这么做"段声明推断一次，其余段落删除', '展示层重构');
+      }
+    }
+  }
+  // V6-R4: codes.json fullContent 禁词（RefModal 点开也是展示层）
+  if (codesJson) {
+    for (const c of Object.values(codesJson.codes)) {
+      const fc = c.fullContent || '';
+      for (const pat of ['定位说明', '最长公共子串', '互证匹配', '**素材原文**', '**出处**', '与 T1 卡挂钩互证']) {
+        if (fc.includes(pat)) {
+          add('V6-code-' + c.code, 'V6 编号内容审核痕迹', '中', c.code, `fullContent 出现"${pat}"`, '清理为知识内容 + 末尾引用块出处', '展示层重构');
+        }
+      }
+    }
+  }
+  const v6 = problems.filter((p) => p.dim.startsWith('V6'));
+  console.log('卡片审核痕迹:', problems.filter((p) => p.id.startsWith('V6-trace')).length);
+  console.log('T1 内容不足:', problems.filter((p) => p.id.startsWith('V6-empty')).length);
+  console.log('推断填充过量:', problems.filter((p) => p.id.startsWith('V6-infer')).length);
+  console.log('编号内容痕迹:', problems.filter((p) => p.id.startsWith('V6-code')).length);
+  if (!v6.length) console.log('V6 全部规则: 通过（0 问题）');
 }
 
 // ---------- 输出 ----------

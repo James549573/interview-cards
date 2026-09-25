@@ -243,13 +243,11 @@ for (const rawCode of [...universe].sort()) {
     const phraseFull = [
       `**${code} · ${name}**`,
       '',
-      `**素材原文**（面试官 Prompt ${pc.lineName}核心 · 第 ${pc.idx + 1} 条）：${pc.phrase}。`,
+      `${pc.phrase}。`,
       '',
-      `**定位说明**：Prompt 各线"核心"一句话序列与编号的位置对应关系已由已知挂钩验证（N19=上线硬门槛、V6=申诉通道+复核人回避、I5=审核三级串联、R5/R3/R21=K-17 挂钩、M2=教研人力合同化）；本条由挂钩它的 T1 卡「${t1name}」名称与该句内容互证匹配（最长公共子串 ≥6 字），定位可信。`,
-      '',
-      `**出处**：面试官Prompt_可直接复制.md · ${pc.lineName}核心`
+      `> 出处：面试官 Prompt ${pc.lineName}核心 · 第 ${pc.idx + 1} 条`
     ].join('\n');
-    const summary = `${code}（${cat}）· ${name}：${pc.phrase}。（面试官 Prompt ${pc.lineName}第 ${pc.idx + 1} 条，与 T1 卡挂钩互证，详见 fullContent。）`;
+    const summary = `${code}（${cat}）· ${name}：${pc.phrase}。`;
     codes[code] = {
       code,
       category: cat,
@@ -391,6 +389,24 @@ for (const rawCode of [...universe].sort()) {
     sourceAnchor: sourceAnchor || (ctx.length ? `提及于 ${ctx.length} 行` : '未出现'),
     relatedCards: mentions
   };
+}
+
+// ---- V6 展示层净化：fullContent 是用户点开看到的，只讲知识 ----
+// "**素材原文**（X）：Y" → Y（直接陈述）；行首 "**出处**：Z" → "> 出处：Z"（引用块）
+function normalizeDisplayContent(fc) {
+  if (!fc) return fc;
+  return fc
+    .split('\n')
+    .map((line) => {
+      let t = line.replace(/^\*\*素材原文\*\*（[^）]*）：/, '').replace(/^\*\*素材原文\*\*：/, '');
+      t = t.replace(/^\*\*出处\*\*：/, '> 出处：');
+      return t;
+    })
+    .join('\n');
+}
+for (const c of Object.values(codes)) {
+  c.fullContent = normalizeDisplayContent(c.fullContent);
+  if (c.summary) c.summary = c.summary.replace(/（面试官 Prompt [^）]*互证[^）]*）/, '');
 }
 
 const out = {
