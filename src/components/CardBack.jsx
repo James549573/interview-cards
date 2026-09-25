@@ -3,7 +3,7 @@ import { marked } from 'marked';
 import { CHAPTER_MAP } from '../lib/cards';
 import { buildTemplate, copyText } from '../lib/clipboard';
 
-export default function CardBack({ card, onNextReviewPreview }) {
+export default function CardBack({ card, onNextReviewPreview, onFlipBack }) {
   const html = useMemo(() => marked.parse(card.answerMarkdown), [card]);
 
   async function copyVerify(e) {
@@ -13,7 +13,7 @@ export default function CardBack({ card, onNextReviewPreview }) {
   }
 
   return (
-    <div class="bg-lightcard dark:bg-darkcard border border-gray-200 dark:border-darkborder rounded-2xl shadow-md p-5">
+    <div class="flex-1 flex flex-col bg-lightcard dark:bg-darkcard border border-gray-200 dark:border-darkborder rounded-2xl shadow-md p-5">
       {card.memoryHook && (
         <div class="mb-4 border-l-4 border-yellow-500 bg-yellow-500/10 px-3 py-2 rounded-r">
           <div class="text-xs text-yellow-600 dark:text-yellow-400 font-semibold mb-0.5">记忆钩子</div>
@@ -28,6 +28,17 @@ export default function CardBack({ card, onNextReviewPreview }) {
         >
           📋 复制查证模板
         </button>
+        {onFlipBack && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onFlipBack();
+            }}
+            class="px-3 py-2 rounded-lg bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-sm min-h-[44px]"
+          >
+            ↩ 看问题
+          </button>
+        )}
         {onNextReviewPreview && <span class="text-xs text-gray-400">{onNextReviewPreview}</span>}
       </div>
     </div>

@@ -1,14 +1,11 @@
 import { CHAPTER_MAP } from '../lib/cards';
 
-export default function CardFront({ card, flipped, onFlip }) {
+export default function CardFront({ card }) {
   if (!card) return null;
   const main = card.questions[0];
   const subs = card.questions.slice(1, 5);
   return (
-    <div
-      onClick={onFlip}
-      class="cursor-pointer select-none bg-lightcard dark:bg-darkcard border border-gray-200 dark:border-darkborder rounded-2xl shadow-md p-5"
-    >
+    <div class="flex-1 flex flex-col select-none bg-lightcard dark:bg-darkcard border border-gray-200 dark:border-darkborder rounded-2xl shadow-md p-5">
       <div class="flex items-center gap-2 flex-wrap text-xs mb-3">
         <span class="px-2 py-0.5 rounded-full bg-blue-600 text-white font-mono">{card.id}</span>
         <span class="text-gray-500 dark:text-gray-400">{CHAPTER_MAP[card.chapter]}</span>
@@ -28,7 +25,7 @@ export default function CardFront({ card, flipped, onFlip }) {
           ))}
         </ul>
       )}
-      <p class="text-xs text-gray-400 dark:text-gray-500 mt-4 text-center">点击卡片任意位置查看答案</p>
+      <p class="text-xs text-gray-400 dark:text-gray-500 mt-auto pt-4 text-center">点击卡片任意位置查看答案</p>
     </div>
   );
 }

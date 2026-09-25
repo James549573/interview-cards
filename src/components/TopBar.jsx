@@ -17,28 +17,36 @@ export default function TopBar({ view, setView, theme, setTheme, syncStatus, due
   const s = SYNC[syncStatus] || SYNC.idle;
   return (
     <header class="sticky top-0 z-40 bg-lightcard/95 dark:bg-darkcard/95 backdrop-blur border-b border-gray-200 dark:border-darkborder">
-      <div class="max-w-3xl mx-auto px-4 py-2 flex items-center gap-2 flex-wrap">
-        <div class="font-bold shrink-0">🃏 面试记忆卡</div>
-        <div class="text-xs text-gray-500 dark:text-gray-400 shrink-0">
-          今日到期 <span class="font-semibold text-orange-500">{dueCount}</span> / 已复习{' '}
+      <div class="max-w-3xl mx-auto px-3 py-2 flex items-center gap-2 min-w-0">
+        <div class="font-bold shrink-0 text-sm sm:text-base">
+          <span class="hidden sm:inline">🃏 面试记忆卡</span>
+          <span class="sm:hidden">🃏 记忆卡</span>
+        </div>
+        <div class="text-xs text-gray-500 dark:text-gray-400 truncate min-w-0">
+          到期 <span class="font-semibold text-orange-500">{dueCount}</span> / 已复习{' '}
           <span class="font-semibold text-green-500">{reviewedCount}</span>
         </div>
         <div class="flex-1" />
-        <span class={`text-xs ${s.cls}`} title={s.label}>
-          {s.dot} {s.label}
+        <span class={`text-xs shrink-0 ${s.cls}`} title={s.label}>
+          {s.dot}
+          <span class="hidden sm:inline"> {s.label}</span>
         </span>
         <button
           onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-          class="px-2 py-1.5 rounded-lg text-sm hover:bg-gray-100 dark:hover:bg-gray-700"
+          class="shrink-0 w-9 h-9 rounded-lg text-sm hover:bg-gray-100 dark:hover:bg-gray-700"
           title="切换主题"
         >
           {theme === 'dark' ? '🌞' : '🌙'}
         </button>
-        <button onClick={onLogout} class="px-2 py-1.5 rounded-lg text-sm hover:bg-gray-100 dark:hover:bg-gray-700" title="退出登录">
+        <button
+          onClick={onLogout}
+          class="shrink-0 w-9 h-9 rounded-lg text-sm hover:bg-gray-100 dark:hover:bg-gray-700"
+          title="退出登录"
+        >
           ⏻
         </button>
       </div>
-      <nav class="max-w-3xl mx-auto px-4 pb-1 flex gap-1 overflow-x-auto no-scrollbar">
+      <nav class="max-w-3xl mx-auto px-3 pb-1 flex gap-1 overflow-x-auto no-scrollbar">
         {VIEWS.map((v) => (
           <button
             key={v.id}

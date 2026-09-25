@@ -121,7 +121,9 @@ export function App() {
         reviewedCount={stats.reviewed}
         onLogout={() => logout()}
       />
-      <main class="flex-1 w-full max-w-3xl mx-auto px-4 pb-24">
+      <main
+        class={`flex-1 w-full max-w-3xl mx-auto px-4 pb-24 ${view === 'memorize' ? 'flex flex-col min-h-0' : ''}`}
+      >
         {view === 'browse' && <BrowseView filter={filter} setFilter={setFilter} />}
         {view === 'memorize' && <MemorizeView progress={progress} saveProgress={saveProgress} showToast={showToast} />}
         {view === 'stats' && <StatsView progress={progress} />}

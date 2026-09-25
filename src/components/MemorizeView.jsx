@@ -13,6 +13,8 @@ export default function MemorizeView({ progress, saveProgress, showToast }) {
   const [now, setNow] = useState(Date.now());
   const [lastFeedback, setLastFeedback] = useState(null); // { id, nextReview }
   const touchStart = useRef(null);
+  // 触摸期间发生移动（滚动/滑动）→ 抑制随后的 click，避免误翻面
+  const suppressClick = useRef(false);
 
   // 定时刷新 now，驱动到期与倒计时
   useEffect(() => {
@@ -70,23 +72,42 @@ export default function MemorizeView({ progress, saveProgress, showToast }) {
     setFlipped(false);
   }
 
-  // 触摸手势：左滑下一题 / 右滑上一题 / 上滑翻面
+  // 触摸手势：左右滑切题。竖向滚动不触发任何动作（不再有上滑翻面）。
+  // 点击翻面由卡片区域的 onClick 处理，且仅当触摸期间没有移动时生效。
   function onTouchStart(e) {
     const t = e.changedTouches[0];
-    touchStart.current = { x: t.clientX, y: t.clientY };
+    touchStart.current = { x: t.clientX, y: t.clientY, moved: false };
+  }
+  function onTouchMove(e) {
+    if (!touchStart.current) return;
+    const t = e.changedTouches[0];
+    if (Math.abs(t.clientX - touchStart.current.x) > 10 || Math.abs(t.clientY - touchStart.current.y) > 10) {
+      touchStart.current.moved = true;
+    }
   }
   function onTouchEnd(e) {
     if (!touchStart.current) return;
     const t = e.changedTouches[0];
     const dx = t.clientX - touchStart.current.x;
     const dy = t.clientY - touchStart.current.y;
+    const moved = touchStart.current.moved;
     touchStart.current = null;
-    if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy)) {
+    // 任何移动（含左右滑）都抑制随后的 click，防止滑动结束被当成点击
+    suppressClick.current = moved;
+    // 仅横向滑动切题：位移足够大且横向明显占优
+    if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5) {
+      suppressClick.current = true;
       if (dx < 0) goNext();
       else goPrev();
-    } else if (dy < -60 && Math.abs(dy) > Math.abs(dx)) {
-      setFlipped((f) => !f);
     }
+  }
+  function onCardClick() {
+    if (suppressClick.current) {
+      suppressClick.current = false;
+      return;
+    }
+    // 点击卡片任意区域：正面翻到背面；背面不动作（返回问题用专门按钮）
+    if (!flipped) setFlipped(true);
   }
 
   // 空闲状态：无到期且无新卡
@@ -125,22 +146,26 @@ export default function MemorizeView({ progress, saveProgress, showToast }) {
   const feedbackPreview = lastFeedback ? formatNextReview(lastFeedback.nextReview, now) : null;
 
   return (
-    <div class="pt-4" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
-      <div class="flex items-center justify-between text-xs text-gray-400 mb-2">
-        <span>
-          队列剩余 {Math.max(0, queue.length - idx)} 张
-          {!allowNew && queue.every?.length !== undefined && ''}
-        </span>
+    <div class="flex-1 flex flex-col min-h-0" onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}>
+      <div class="flex items-center justify-between text-xs text-gray-400 mb-2 shrink-0">
+        <span>队列剩余 {Math.max(0, queue.length - idx)} 张</span>
         <label class="flex items-center gap-1 cursor-pointer select-none">
           <input type="checkbox" checked={allowNew} onChange={(e) => setAllowNew(e.currentTarget.checked)} class="accent-blue-600" />
           学新卡
         </label>
       </div>
-      {flipped ? (
-        <CardBack card={current} onNextReviewPreview={entry && entry.nextReview > 0 ? formatNextReview(entry.nextReview, now) : null} />
-      ) : (
-        <CardFront card={current} flipped={flipped} onFlip={() => setFlipped(true)} />
-      )}
+      {/* 卡片区域：撑满剩余空间，整片可点 */}
+      <div class="flex-1 flex flex-col min-h-0" onClick={onCardClick}>
+        {flipped ? (
+          <CardBack
+            card={current}
+            onNextReviewPreview={entry && entry.nextReview > 0 ? formatNextReview(entry.nextReview, now) : null}
+            onFlipBack={() => setFlipped(false)}
+          />
+        ) : (
+          <CardFront card={current} />
+        )}
+      </div>
       <FeedbackBar visible={flipped} onFeedback={handleFeedback} nextReviewPreview={feedbackPreview} />
     </div>
   );
