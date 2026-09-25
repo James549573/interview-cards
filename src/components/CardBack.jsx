@@ -1,10 +1,23 @@
-import { useMemo } from 'preact/hooks';
+import { useMemo, useState } from 'preact/hooks';
 import { marked } from 'marked';
 import { CHAPTER_MAP } from '../lib/cards';
 import { buildTemplate, copyText } from '../lib/clipboard';
+import { annotateCodes } from '../lib/codes';
+import RefModal from './RefModal.jsx';
 
 export default function CardBack({ card, onNextReviewPreview, onFlipBack }) {
-  const html = useMemo(() => marked.parse(card.answerMarkdown), [card]);
+  const [refCode, setRefCode] = useState(null);
+  const { html: annotated } = useMemo(() => annotateCodes(card.answerMarkdown), [card]);
+  const html = useMemo(() => marked.parse(annotated), [annotated]);
+
+  // 事件委托：点击编号徽章弹出面板
+  function onBodyClick(e) {
+    const badge = e.target.closest('.ref-badge');
+    if (badge) {
+      e.stopPropagation();
+      setRefCode(badge.dataset.code);
+    }
+  }
 
   async function copyVerify(e) {
     e.stopPropagation();
@@ -20,7 +33,7 @@ export default function CardBack({ card, onNextReviewPreview, onFlipBack }) {
           <div class="text-sm font-medium">{card.memoryHook}</div>
         </div>
       )}
-      <div class="md-body" dangerouslySetInnerHTML={{ __html: html }} />
+      <div class="md-body" onClick={onBodyClick} dangerouslySetInnerHTML={{ __html: html }} />
       <div class="mt-4 flex items-center justify-between gap-2 flex-wrap">
         <button
           onClick={copyVerify}
@@ -41,6 +54,7 @@ export default function CardBack({ card, onNextReviewPreview, onFlipBack }) {
         )}
         {onNextReviewPreview && <span class="text-xs text-gray-400">{onNextReviewPreview}</span>}
       </div>
+      {refCode && <RefModal code={refCode} onClose={() => setRefCode(null)} />}
     </div>
   );
 }

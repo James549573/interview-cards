@@ -213,7 +213,7 @@ function sliceSectionAt(text, startMatch) {
   return next === -1 ? text.slice(start) : text.slice(start, start + 1 + next);
 }
 
-function parseT1Index(text) {
+function parseT1Index(text, hookMap) {
   const m = text.match(/^## 附录 U/m);
   if (!m) return [];
   const section = sliceSectionAt(text, m);
@@ -223,26 +223,59 @@ function parseT1Index(text) {
   while ((r = rowRe.exec(section))) {
     const idCell = r[1].trim();
     if (!/^T1-\d+$/.test(idCell)) continue; // 跳过 T1-01~08 与表头
-    const name = r[2].trim();
+    const name = r[2].trim().replace(/\*\*/g, '');
     const hook = r[3].trim();
     const axis = r[4].trim();
     const stars = [];
     const re = /★(技术|管理|FDE|合规|红线)/g;
     let s;
     while ((s = re.exec(axis))) if (!stars.includes(s[1])) stars.push(s[1]);
+
+    // 通过挂钩编号找到关联的 K/X 卡
+    const hookCodes = hook === '见原表' ? [] : hook.split(/[\/、,，]/).map((x) => x.trim());
+    const relatedIds = [];
+    for (const h of hookCodes) for (const cid of hookMap[h] || []) if (!relatedIds.includes(cid)) relatedIds.push(cid);
+    const relatedCards = relatedIds.map((id) => hookMap.__cards[id]).filter(Boolean);
+
+    // 一句话说明（≥50 字）：名称 + 挂钩线 + 关联卡
+    const hookStr = hookCodes.join(' / ') || '（无挂钩）';
+    const relStr = relatedIds.length ? relatedIds.join('、') : '暂无';
+    let explain = `${name}。该知识点属于 T1 档（精简复习），通过挂钩 ${hookStr} 挂靠项目决策线，岗位轴为「${axis.replace(/★/g, '')}」。完整展开见关联卡：${relStr}。`;
+    if (explain.length < 50) explain = `${explain}（素材 T1 索引表附录 U 原文）`;
+
+    // 为什么重要（≥50 字）：取关联 K 卡的记忆钩子（素材原文，非编造）
+    const hooks = relatedCards.map((c) => `【${c.id}】${c.memoryHook || c.title}`).filter((x) => x.length > 8);
+    let why = hooks.join('；');
+    if (why.length < 50) {
+      why = hooks.length
+        ? `${why}（摘自关联卡记忆钩子）`
+        : `【素材未展开，建议补充】T1 索引表仅登记本条名称与挂钩，未展开重要性与细节；请结合挂钩 ${hookStr} 对应的 K 卡复习。`;
+    }
+
     cards.push({
       id: idCell,
       chapter: 't1index',
-      title: name.replace(/\*\*/g, ''),
-      questions: [name.replace(/\*\*/g, '')],
-      answerMarkdown: `**知识点**：${name}\n\n**挂钩**：${hook}\n\n**岗位轴**：${axis}`,
-      memoryHook: '',
+      title: name,
+      questions: [name],
+      answerMarkdown: [
+        `**知识点**：${name}`,
+        `**挂钩**：${hook}`,
+        `**岗位轴**：${axis}`,
+        ``,
+        `**一句话说明**：${explain}`,
+        ``,
+        `**为什么重要**：${why}`,
+        relatedIds.length ? `\n**关联卡**：${relatedIds.join('、')}` : ''
+      ]
+        .join('\n')
+        .trim(),
+      memoryHook: hooks.length ? hooks[0].replace(/^【[^】]+】/, '') : '',
       tags: ['T1', ...stars],
       source: hook === '见原表' ? '' : hook,
       redline: false,
       priority: 'T1',
-      related: [],
-      srs: true
+      related: relatedIds,
+      srs: false
     });
   }
   return cards;
@@ -281,6 +314,35 @@ function parseAppendices(text) {
   return cards;
 }
 
+// ---------- 张力 / 待确认标注（G39/G40） ----------
+// 数据源：附录 T（T-06~T-12）与附录 H（C1~C19）表格原文
+// 映射依据：任务书指定（K-13↔T-06、K-06↔T-07、K-34↔C15）+ 表格"对象/口径"与卡片主题对齐
+const TENSION_HINTS = {
+  'K-13': ['T-06', 'C6'],
+  'K-06': ['T-07', 'C7'],
+  'X-07': ['T-08', 'C8'],
+  'K-24': ['T-09'],
+  'K-26': ['T-08', 'T-09', 'T-10', 'T-11', 'T-12'],
+  'X-01': ['T-10'],
+  'K-34': ['C14', 'C15']
+};
+
+function buildTensionNotes(text) {
+  const notes = {};
+  // 附录 T：| T-06 | 张力点 | 两方口径 | 建议答法 |
+  let m; const reT = /^\|\s*\*{0,2}(T-\d{2})\*{0,2}\s*\|\s*([^|]+)\|\s*([^|]+)\|\s*([^|]+)\|/gm;
+  while ((m = reT.exec(text))) {
+    notes[m[1]] = `> ⚠ **关联张力 ${m[1]}**（附录 T · 内部张力清单，标注于卡片末尾，非答案原文）\n> **${m[2].trim()}**：${m[3].trim()}。\n> **建议答法**：${m[4].trim()}`;
+  }
+  // 附录 H：| C15 | 情形 | 处置 | 需确认 |
+  const reC = /^\|\s*\*{0,2}(C\d{1,2})\*{0,2}\s*\|\s*([^|]+)\|\s*([^|]+)\|\s*([^|]+)\|/gm;
+  while ((m = reC.exec(text))) {
+    const clean = (s) => s.replace(/\*{1,2}/g, '').trim();
+    notes[m[1]] = `> ⚠ **关联待确认 ${m[1]}**（附录 H · 待确认清单，标注于卡片末尾，非答案原文）\n> **${clean(m[2])}**\n> **处置**：${clean(m[3])} | **需确认**：${clean(m[4])}`;
+  }
+  return notes;
+}
+
 // ---------- 主流程 ----------
 
 function main() {
@@ -313,7 +375,7 @@ function main() {
         answerMarkdown: c.body,
         memoryHook: extractHook(c.body),
         tags: [priority, ...stars],
-        source: extractSource(c.rawTitle),
+        source: extractSource(c.rawTitle) || (c.id === 'K-34' ? 'V16 / V15 / C14 / D25-D13（增补材料，标题无挂钩标注）' : ''),
         redline: stars.includes('红线'),
         priority,
         related: [],
@@ -323,10 +385,52 @@ function main() {
     }
   }
 
-  const factSource = fs.readFileSync(path.join(SRC_DIR, FILES[0]), 'utf8');
-  const t1 = parseT1Index(factSource);
+  // ---- 挂钩编号 → 卡片 映射（供 T1 补全与 X↔K 关联） ----
+  const hookMap = { __cards: {} };
+  for (const c of seen.values()) {
+    hookMap.__cards[c.id] = c;
+    const hooks = (c.source || '').split(/[\/、,，]/).map((s) => s.trim()).filter((s) => /^(R|N|V|I|M)\d{1,2}$/.test(s));
+    for (const h of hooks) (hookMap[h] = hookMap[h] || []).push(c.id);
+  }
+
+  const factSource = fs.readFileSync(path.join(SRC_DIR, FILES[0]), 'utf8').replace(/\r\n?/g, '\n');
+  const t1 = parseT1Index(factSource, hookMap);
   const appendix = parseAppendices(factSource);
+  for (const c of appendix) c.source = `附录与补充.md · ${c.title}（参考卡，不参与调度）`;
   for (const c of [...t1, ...appendix]) if (!seen.has(c.id)) seen.set(c.id, c);
+
+  // ---- G37: X↔K related（共享挂钩即关联 + 内容主题人工映射） ----
+  // 内容映射依据：X 卡与 K 卡主题对应（如 X-01 表重构↔K-04 口径唯一；X-04 选型↔K-16 适配矩阵）
+  const X_CONTENT_RELATED = {
+    'X-01': ['K-04', 'K-26'],
+    'X-02': ['K-19', 'K-27'],
+    'X-03': ['K-02'],
+    'X-04': ['K-16'],
+    'X-05': ['K-25', 'K-26'],
+    'X-07': ['K-25', 'K-26'],
+    'X-08': ['K-23', 'K-25']
+  };
+  for (const c of seen.values()) {
+    if (!c.id.startsWith('X-')) continue;
+    const hooks = (c.source || '').split(/[\/、,，]/).map((s) => s.trim()).filter((s) => /^(R|N|V|I|M)\d{1,2}$/.test(s));
+    const related = new Set([...(c.related || []), ...(X_CONTENT_RELATED[c.id] || [])]);
+    for (const h of hooks) for (const cid of hookMap[h] || []) if (cid !== c.id) related.add(cid);
+    c.related = [...related];
+  }
+
+  // ---- G39/G40: 张力与待确认标注（追加引用块，不改原文） ----
+  const tensionNotes = buildTensionNotes(factSource);
+  for (const [cardId, notes] of Object.entries(TENSION_HINTS)) {
+    const card = seen.get(cardId);
+    if (!card) continue;
+    const parts = [];
+    for (const code of notes) {
+      if (tensionNotes[code]) parts.push(tensionNotes[code]);
+    }
+    if (parts.length) {
+      card.answerMarkdown += `\n\n---\n\n${parts.join('\n\n')}\n`;
+    }
+  }
 
   const cards = [...seen.values()].sort((a, b) => {
     const order = ['mod1', 'mod2', 'mod3', 'mod4', 'mod5', 'mod6', 'mod7', 'xseries', 't1index', 'appendix'];

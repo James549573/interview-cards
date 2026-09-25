@@ -2,19 +2,36 @@ import { useState, useMemo } from 'preact/hooks';
 import { CARDS, CHAPTERS, CHAPTER_MAP } from '../lib/cards';
 import { todayStats, upcomingDays, newProgress } from '../lib/srs';
 import { marked } from 'marked';
+import { annotateCodes } from '../lib/codes';
+import RefModal from './RefModal.jsx';
 
 export default function BrowseView({ filter, setFilter }) {
   const [query, setQuery] = useState('');
   const [expanded, setExpanded] = useState(null);
+  const [refCode, setRefCode] = useState(null);
 
   const shown = useMemo(() => {
     let out = CARDS;
     if (filter.chapter) out = out.filter((c) => c.chapter === filter.chapter);
     if (filter.tags && filter.tags.length) out = out.filter((c) => filter.tags.every((t) => c.tags.includes(t)));
     const q = query.trim().toLowerCase();
-    if (q) out = out.filter((c) => c.title.toLowerCase().includes(q) || c.answerMarkdown.toLowerCase().includes(q) || c.id.toLowerCase().includes(q));
+    if (q) {
+      out = out.filter(
+        (c) =>
+          c.title.toLowerCase().includes(q) ||
+          c.answerMarkdown.toLowerCase().includes(q) ||
+          c.id.toLowerCase().includes(q) ||
+          (c.tags || []).some((t) => t.toLowerCase().includes(q)) ||
+          (c.source || '').toLowerCase().includes(q)
+      );
+    }
     return out;
   }, [filter, query]);
+
+  function onBodyClick(e) {
+    const badge = e.target.closest('.ref-badge');
+    if (badge) setRefCode(badge.dataset.code);
+  }
 
   const toggleTag = (t) => {
     const tags = filter.tags.includes(t) ? filter.tags.filter((x) => x !== t) : [...filter.tags, t];
@@ -87,20 +104,27 @@ export default function BrowseView({ filter, setFilter }) {
                 </span>
               ))}
             </button>
-            {expanded === c.id && (
-              <div class="px-4 pb-4">
-                {c.memoryHook && (
-                  <div class="mb-3 border-l-4 border-yellow-500 bg-yellow-500/10 px-3 py-2 rounded-r text-sm">
-                    <span class="text-yellow-600 dark:text-yellow-400 font-semibold">记忆钩子：</span>
-                    {c.memoryHook}
-                  </div>
-                )}
-                <div class="md-body" dangerouslySetInnerHTML={{ __html: marked.parse(c.answerMarkdown) }} />
-              </div>
-            )}
+            {expanded === c.id && <ExpandedBody card={c} onBodyClick={onBodyClick} />}
           </div>
         ))}
       </div>
+      {refCode && <RefModal code={refCode} onClose={() => setRefCode(null)} />}
+    </div>
+  );
+}
+
+function ExpandedBody({ card, onBodyClick }) {
+  const { html: annotated } = useMemo(() => annotateCodes(card.answerMarkdown), [card]);
+  const html = useMemo(() => marked.parse(annotated), [annotated]);
+  return (
+    <div class="px-4 pb-4">
+      {card.memoryHook && (
+        <div class="mb-3 border-l-4 border-yellow-500 bg-yellow-500/10 px-3 py-2 rounded-r text-sm">
+          <span class="text-yellow-600 dark:text-yellow-400 font-semibold">记忆钩子：</span>
+          {card.memoryHook}
+        </div>
+      )}
+      <div class="md-body" onClick={onBodyClick} dangerouslySetInnerHTML={{ __html: html }} />
     </div>
   );
 }

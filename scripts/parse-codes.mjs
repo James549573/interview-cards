@@ -1,0 +1,299 @@
+// 从素材提取全部编号定义 → src/data/codes.json
+// 名称来源优先级：附录 H/T 表格 > K/X 卡标题 > T1 索引表 > 内联"编号 名称" > 未找到
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const ROOT = path.resolve(__dirname, '..');
+const SRC = process.env.INTERVIEW_PREP_DIR || path.join(ROOT, 'source');
+
+// 素材优先级：合并包是唯一事实源
+const FILE_PRIORITY = [
+  '面试官证据源包_T0核心合并版.md',
+  '04_T0增补_K34_招生季与年度报名口径.md',
+  '03_三体预演与新增知识点.md',
+  'T0_模块1_AI410_模块2_AI401.md',
+  'T0_模块3_4_5_RAG_合规_管理.md',
+  '附录与补充.md',
+  '面试官Prompt_可直接复制.md'
+];
+
+const files = fs.readdirSync(SRC).filter((f) => f.endsWith('.md'));
+const texts = {};
+for (const f of files) texts[f] = fs.readFileSync(path.join(SRC, f), 'utf8').replace(/\r\n?/g, '\n');
+
+// ---------- 编号识别 ----------
+// 显式词表类（无连字符或有特殊形态）
+const SPECIAL = ['TRL', 'E6', 'F-2', 'A-4'];
+const GENERIC = /\b(R\d{1,2}|N\d{1,2}|V\d{1,2}|I\d{1,2}|M\d{1,2}[bc]?|K-\d{2}|X-\d{2}|T1-\d{2}|AI-\d{3}|CL-(?:RAG-)?\d{1,3}|ADR-[\d-]+|ISSUE-\d{3}|GF-\d+(?:\.\d+)?|AC-\d{2}|G\d{1,2}|T-\d{2}|C\d{1,2}|D\d{1,2}|RK-\d{2}|SC-\d{2}|P-\d{1,2}|P\d\b|US-\d|INF-\d{2,3}|IL-\d{3}|Q-[A-Z]{2}-\d{2}|M-修\d)\b/g;
+
+function extractCodes(text) {
+  const set = new Set();
+  let m;
+  while ((m = GENERIC.exec(text))) set.add(m[1]);
+  for (const s of SPECIAL) if (new RegExp(`\\b${s.replace('-', '-')}\\b`).test(text)) set.add(s);
+  return set;
+}
+
+// 规范化：M1b → M1（同条目），去重
+function norm(code) {
+  const m = code.match(/^(M\d{1,2})[bc]$/);
+  return m ? m[1] : code;
+}
+
+// 任务书要求的覆盖范围（素材未出现的也要有条目，标【素材未展开】）
+const REQUIRED_RANGES = [];
+for (let i = 1; i <= 27; i++) REQUIRED_RANGES.push('R' + i);
+for (let i = 1; i <= 22; i++) REQUIRED_RANGES.push('N' + i);
+for (let i = 1; i <= 18; i++) REQUIRED_RANGES.push('V' + i);
+for (let i = 1; i <= 14; i++) REQUIRED_RANGES.push('I' + i);
+for (let i = 1; i <= 35; i++) REQUIRED_RANGES.push('M' + i);
+for (let i = 1; i <= 19; i++) REQUIRED_RANGES.push('C' + i);
+for (let i = 6; i <= 12; i++) REQUIRED_RANGES.push('T-' + String(i).padStart(2, '0'));
+for (let i = 1; i <= 26; i++) REQUIRED_RANGES.push('D' + i);
+for (let i = 1; i <= 10; i++) REQUIRED_RANGES.push('G' + i);
+for (let i = 1; i <= 8; i++) REQUIRED_RANGES.push('X-' + String(i).padStart(2, '0'));
+for (let i = 1; i <= 34; i++) REQUIRED_RANGES.push('K-' + String(i).padStart(2, '0'));
+for (let i = 9; i <= 40; i++) REQUIRED_RANGES.push('T1-' + String(i).padStart(2, '0'));
+for (const c of ['AI-106', 'AI-201', 'AI-205', 'AI-208', 'AI-402', 'AI-403', 'AI-406', 'AI-411', 'AI-602', 'AI-101', 'AI-103', 'AI-105', 'AI-109', 'AI-410', 'AI-401', 'INF-03', 'INF-04', 'IL-401', 'RK-08', 'SC-08', 'P-1', 'P-2', 'P7', 'P-11', 'US-6', 'F-2', 'E6', 'A-4', 'TRL', 'CL-03', 'CL-04', 'CL-13', 'CL-18', 'CL-19', 'ADR-410-01', 'ISSUE-082']) REQUIRED_RANGES.push(c);
+
+function categoryOf(code) {
+  if (/^R\d/.test(code)) return 'RAG';
+  if (/^N\d/.test(code)) return 'AI-410 数据问答线';
+  if (/^V\d/.test(code)) return 'AI-401 招生核验线';
+  if (/^I\d/.test(code) || /^INF-/.test(code)) return '基础设施线';
+  if (/^M\d|^M-/.test(code)) return '管理/交付线';
+  if (/^K-/.test(code)) return '知识点卡';
+  if (/^X-/.test(code)) return '准 T0 知识点';
+  if (/^T1-/.test(code)) return 'T1 索引';
+  if (/^AI-/.test(code)) return '建设对象';
+  if (/^CL-/.test(code)) return '合同条款';
+  if (/^ADR-/.test(code)) return '架构决策记录';
+  if (/^ISSUE-/.test(code)) return '材料问题登记';
+  if (/^GF-/.test(code)) return 'GF 规范';
+  if (/^AC-/.test(code)) return '验收标准';
+  if (/^G\d/.test(code)) return '上线硬门槛';
+  if (/^T-/.test(code)) return '内部张力（附录 T）';
+  if (/^C\d/.test(code)) return '待确认清单（附录 H）';
+  if (/^D\d/.test(code)) return '需求/文档编号';
+  if (/^RK-/.test(code)) return '风险登记';
+  if (/^SC-/.test(code)) return '安全约束';
+  if (/^P-?\d/.test(code)) return '人员/角色';
+  if (/^US-/.test(code)) return '用户故事';
+  if (/^IL-/.test(code)) return '集成约束';
+  if (code === 'TRL') return '技术成熟度';
+  if (code === 'E6') return '评测集';
+  if (code === 'F-2' || code === 'A-4') return '监控/告警指标';
+  return '其他';
+}
+
+// ---------- 名称提取 ----------
+// 1) K/X 卡标题：K-01 → 标题
+const cardTitleName = {};
+for (const [f, t] of Object.entries(texts)) {
+  let m; const re = /^### (K-\d{2}|X-\d{2}) (.+)$/gm;
+  while ((m = re.exec(t))) {
+    if (cardTitleName[m[1]]) continue;
+    const title = m[2].replace(/【[^】]*】/g, '').replace(/★[^★]*/g, '').replace(/[（(][^)）]*[)）]/g, '').trim();
+    cardTitleName[m[1]] = { name: title, file: f };
+  }
+}
+// 2) T1 索引表行：| T1-30 | 名称 | R21 | 轴 |  → 同时建立挂钩编号→名称的反向映射
+const t1RowName = {};
+const hookFromT1 = {};
+for (const [f, t] of Object.entries(texts)) {
+  let m; const re = /^\|\s*(T1-\d{2})\s*\|\s*([^|]+)\|\s*([^|]+)\|\s*([^|]+)\|/gm;
+  while ((m = re.exec(t))) {
+    if (!t1RowName[m[1]]) {
+      t1RowName[m[1]] = { name: m[2].trim(), file: f, hook: m[3].trim(), axis: m[4].trim() };
+      for (const h of m[3].split(/[\/、,，]/).map((s) => norm(s.trim())).filter((s) => /^(R|N|V|I|M)\d{1,2}$/.test(s))) {
+        if (!hookFromT1[h]) hookFromT1[h] = { name: m[2].trim(), file: f };
+      }
+    }
+  }
+}
+// 2b) K/X 卡标题的【已挂钩 …】→ 标题核心词（比 T1 名称粗，优先级更低）
+const hookFromTitle = {};
+for (const [f, t] of Object.entries(texts)) {
+  let m; const re = /^### (K-\d{2}|X-\d{2}) (.+)$/gm;
+  while ((m = re.exec(t))) {
+    const hm = m[2].match(/【(?:已挂钩|半挂钩)\s*([^】]+)】/);
+    if (!hm) continue;
+    const title = m[2].replace(/【[^】]*】/g, '').replace(/★[^★]*/g, '').trim();
+    for (const h of hm[1].split(/[\/、,，]/).map((s) => norm(s.trim())).filter((s) => /^(R|N|V|I|M)\d{1,2}$/.test(s))) {
+      if (!hookFromTitle[h]) hookFromTitle[h] = { name: title.slice(0, 30), file: f };
+    }
+  }
+}
+// 3) 附录 T / H 表格行
+const tableRow = {}; // code -> { name, fullRow, file, table }
+for (const [f, t] of Object.entries(texts)) {
+  let m; const re = /^\|\s*\*{0,2}(T-\d{2}|C\d{1,2})\*{0,2}\s*\|\s*([^|]+)\|([^|]*)\|([^|]*)\|/gm;
+  while ((m = re.exec(t))) {
+    const code = m[1];
+    if (!tableRow[code]) {
+      tableRow[code] = {
+        name: m[2].replace(/\*{1,2}/g, '').trim(),
+        fullRow: m[0].replace(/\s*\|/g, ' | ').trim(),
+        file: f,
+        table: code.startsWith('T-') ? '附录 T · 内部张力清单' : '附录 H · 待确认清单'
+      };
+    }
+  }
+}
+// 4) 内联"编号 名称"：AI-201 智能答疑 / CL-13 人工评审不得由承建方自查 / R21：xxx
+const inlineName = {}; // code -> { name, file } 取最高优先级文件
+for (const f of FILE_PRIORITY) {
+  const t = texts[f];
+  if (!t) continue;
+  let m; const re = /\b(R\d{1,2}|N\d{1,2}|V\d{1,2}|I\d{1,2}|M\d{1,2}|AI-\d{3}|CL-(?:RAG-)?\d{1,3}|ADR-[\d-]+|ISSUE-\d{3}|AC-\d{2}|RK-\d{2}|SC-\d{2}|INF-\d{2,3}|IL-\d{3}|US-\d|E6|F-2|A-4|GF-\d+(?:\.\d+)?)\s+([一-龥][^，。；|）)】\n]{2,60})/g;
+  while ((m = re.exec(t))) {
+    const code = norm(m[1]);
+    // 名称：截到第一个 "/" 或 "【"，去 ★ 尾注，限 30 字
+    const name = m[2].split(/[\/【]/)[0].replace(/★.*$/, '').trim().slice(0, 30).replace(/[，。；]$/, '');
+    // 过滤：名称不能以"等/和/与/的"开头这类连词碎片，也不能是纯数字
+    if (!inlineName[code] && name.length >= 2 && !/^[等和与的及其在]/.test(name)) inlineName[code] = { name, file: f };
+  }
+  // "CODE：名称" 形态
+  const re2 = /\b(R\d{1,2}|N\d{1,2}|V\d{1,2}|I\d{1,2}|M\d{1,2}|AI-\d{3}|AC-\d{2}|D\d{1,2})\s*[：:]\s*([一-龥][^。\n]{3,60})/g;
+  while ((m = re2.exec(t))) {
+    const code = norm(m[1]);
+    const name = m[2].trim();
+    if (!inlineName[code]) inlineName[code] = { name, file: f };
+  }
+}
+
+// ---------- 上下文（fullContent / summary） ----------
+const allCards = JSON.parse(fs.readFileSync(path.join(ROOT, 'src/data/cards.json'), 'utf8')).cards;
+const cardMentions = {}; // code -> [cardId]
+for (const c of allCards) {
+  if (!c.answerMarkdown) continue;
+  const found = extractCodes(c.title + ' ' + c.answerMarkdown);
+  for (const code of found) (cardMentions[code] = cardMentions[code] || []).push(c.id);
+}
+
+function contextFor(code) {
+  // 按优先级收集提及该编号的行
+  const lines = [];
+  for (const f of FILE_PRIORITY) {
+    const t = texts[f];
+    if (!t) continue;
+    const re = new RegExp(`(^|[^\\w-])(${code.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})(?![\\w-])`, 'g');
+    for (const line of t.split('\n')) {
+      if (re.test(line)) lines.push({ file: f, line: line.trim() });
+      re.lastIndex = 0;
+    }
+  }
+  return lines;
+}
+
+// ---------- 组装 ----------
+const codes = {};
+const allSeen = new Set();
+for (const [f, t] of Object.entries(texts)) for (const c of extractCodes(t)) allSeen.add(norm(c));
+const universe = new Set([...allSeen, ...REQUIRED_RANGES]);
+
+for (const rawCode of [...universe].sort()) {
+  const code = norm(rawCode);
+  if (codes[code]) continue;
+  const cat = categoryOf(code);
+  let name = '';
+  let sourceFile = '';
+  let sourceAnchor = '';
+  let fullContent = '';
+
+  if (tableRow[code]) {
+    name = tableRow[code].name;
+    sourceFile = tableRow[code].file;
+    sourceAnchor = tableRow[code].table;
+    fullContent = tableRow[code].fullRow;
+  } else if (hookFromT1[code]) {
+    name = hookFromT1[code].name + '（T1 索引挂钩）';
+    sourceFile = hookFromT1[code].file;
+    sourceAnchor = 'T1 索引表（附录 U）挂钩映射';
+  } else if (hookFromTitle[code]) {
+    name = hookFromTitle[code].name + '（卡片标题挂钩）';
+    sourceFile = hookFromTitle[code].file;
+    sourceAnchor = 'K/X 卡标题【已挂钩】';
+  } else if (cardTitleName[code]) {
+    name = cardTitleName[code].name;
+    sourceFile = cardTitleName[code].file;
+    sourceAnchor = code + ' 标题';
+  } else if (t1RowName[code]) {
+    name = t1RowName[code].name;
+    sourceFile = t1RowName[code].file;
+    sourceAnchor = 'T1 索引表（附录 U）';
+  } else if (inlineName[code]) {
+    name = inlineName[code].name;
+    sourceFile = inlineName[code].file;
+    sourceAnchor = '内联定义';
+  }
+
+  const ctx = contextFor(code);
+  const mentions = cardMentions[code] || [];
+  if (!fullContent) {
+    const picked = [];
+    const seenLines = new Set();
+    for (const f of FILE_PRIORITY) {
+      for (const { file, line } of ctx) {
+        if (file !== f || seenLines.has(line)) continue;
+        seenLines.add(line);
+        picked.push(`- (${file}) ${line.slice(0, 200)}`);
+        if (picked.length >= 8) break;
+      }
+      if (picked.length >= 8) break;
+    }
+    fullContent = picked.length ? picked.join('\n') : '';
+  }
+  if (!fullContent) {
+    fullContent = `【素材未展开】素材中未出现编号 ${code} 的展开内容。按任务书编号体系推断：${cat} 系列。面试中如被问到，请先回素材核对，不要引用本条。`;
+  } else if (name === '' ) {
+    fullContent = `【素材未展开名称定义，以下是素材中该编号出现的上下文】\n${fullContent}`;
+  }
+
+  // summary：≥30 字，从上下文取
+  let summary = '';
+  if (tableRow[code]) {
+    summary = `${code}（${cat}）：${name}。完整口径与建议答法见附录原文。`;
+  } else if (ctx.length) {
+    const first = ctx[0].line.replace(/\*\*/g, '').replace(/^>\s*/, '');
+    summary = `${code}（${cat}）${name ? '· ' + name : ''}：素材上下文——${first}`.slice(0, 160);
+  } else {
+    summary = `【素材未展开】编号 ${code} 属于${cat}编号体系，但素材中未出现该编号的展开内容。`;
+  }
+  if (summary.length < 30) summary += (name ? ` 相关卡片：${mentions.join('、') || '无'}。` : ` 该编号仅在挂钩标注中出现，素材未展开。`);
+  if (summary.length < 30) summary = summary.replace(/。$/, '') + `，详见 fullContent。`;
+
+  codes[code] = {
+    code,
+    category: cat,
+    name: name || '',
+    summary,
+    fullContent,
+    sourceFile: sourceFile || (ctx.length ? ctx[0].file : ''),
+    sourceAnchor: sourceAnchor || (ctx.length ? `提及于 ${ctx.length} 行` : '未出现'),
+    relatedCards: mentions
+  };
+}
+
+const out = {
+  version: 1,
+  generatedAt: new Date().toISOString(),
+  stats: {
+    total: Object.keys(codes).length,
+    withName: Object.values(codes).filter((c) => c.name).length,
+    unnamed: Object.values(codes).filter((c) => !c.name).length,
+    unexpanded: Object.values(codes).filter((c) => c.fullContent.startsWith('【素材未展开】')).length
+  },
+  codes
+};
+fs.mkdirSync(path.join(ROOT, 'src/data'), { recursive: true });
+fs.writeFileSync(path.join(ROOT, 'src/data/codes.json'), JSON.stringify(out, null, 2));
+console.log(`codes.json 生成：共 ${out.stats.total} 条 | 有名称 ${out.stats.withName} | 无名称 ${out.stats.unnamed} | 未展开 ${out.stats.unexpanded}`);
+
+// 抽查
+for (const k of ['R21', 'AI-201', 'T-06', 'C15', 'K-16', 'M31', 'CL-19']) {
+  const e = codes[k];
+  console.log(`--- ${k}: name=${e ? e.name || '(空)' : 'MISSING'} | cards=${e ? e.relatedCards.join(',') : ''}`);
+}

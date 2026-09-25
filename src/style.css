@@ -112,3 +112,33 @@ html.dark .md-body hr {
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
+
+/* ---- 编号引用徽章（Ref） ---- */
+.md-body .ref-badge {
+  display: inline-block;
+  padding: 0 6px;
+  margin: 0 1px;
+  border-radius: 6px;
+  font-size: 0.78em;
+  font-family: ui-monospace, monospace;
+  background: rgba(99, 102, 241, 0.15);
+  color: #6366f1;
+  border: 1px solid rgba(99, 102, 241, 0.4);
+  cursor: pointer;
+  vertical-align: baseline;
+  line-height: 1.6;
+}
+.md-body .ref-badge:hover {
+  background: rgba(99, 102, 241, 0.3);
+}
+.dark .md-body .ref-badge {
+  background: rgba(129, 140, 248, 0.18);
+  color: #a5b4fc;
+  border-color: rgba(129, 140, 248, 0.45);
+}
+.md-body .ref-missing {
+  background: rgba(234, 179, 8, 0.15);
+  color: #ca8a04;
+  border-color: rgba(234, 179, 8, 0.5);
+  cursor: help;
+}

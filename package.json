@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "parse": "node scripts/parse-cards.mjs"
+    "parse": "node scripts/parse-cards.mjs && node scripts/parse-codes.mjs",
+    "parse-codes": "node scripts/parse-codes.mjs"
   },
   "dependencies": {
     "marked": "^12.0.2",
