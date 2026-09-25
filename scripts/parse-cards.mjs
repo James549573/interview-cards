@@ -13,7 +13,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { CONTENT as CODE_CONTENT, buildPhraseContent } from './code-knowledge.mjs';
-import { T1_CONTENT } from './t1-knowledge.mjs';
+import { T1_CONTENT, T1_A } from './t1-knowledge.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const DEFAULT_DIR = 'C:\\Users\\admin\\WorkBuddy\\2026-09-24-22-32-06\\outputs\\interview_prep';
@@ -233,30 +233,45 @@ function parseT1Index(text, hookMap, phraseMap = {}, bodyMention = {}) {
     let s;
     while ((s = re.exec(axis))) if (!stars.includes(s[1])) stars.push(s[1]);
 
-    // 关联卡 = 标题挂钩映射 ∪ K 卡正文引用映射（如 I2 在 K-21 追问原文中被引用）
     const hookCodes = hook === '见原表' ? [] : hook.split(/[\/、,，]/).map((x) => x.trim());
-    const relatedIds = [];
-    for (const h of hookCodes) {
-      for (const cid of hookMap[h] || []) if (!relatedIds.includes(cid)) relatedIds.push(cid);
-      for (const cid of bodyMention[h] || []) if (!relatedIds.includes(cid)) relatedIds.push(cid);
+
+    // ---- V7 分档制（大山哥判定）：A=挂钩句有多面信息 → 四段式（curated 手写）；
+    //      B=挂钩句只有一句陈述 → 只写"它是什么"（挂钩句原文）+ 关联指引。
+    // 硬约束：B 档不铺推断、不贴 K 卡不相关段落充数、不编造。
+    const cur = T1_CONTENT[idCell] || T1_A[idCell];
+    const tier = cur ? 'A' : 'B';
+
+    // 关联卡：curated relatedOverride（人工核校，替换自动映射）优先；
+    // 否则 标题挂钩映射 ∪ K 卡正文引用映射
+    let relatedIds;
+    if (cur && Array.isArray(cur.relatedOverride)) {
+      relatedIds = cur.relatedOverride.filter((id) => hookMap.__cards[id]);
+    } else {
+      relatedIds = [];
+      for (const h of hookCodes) {
+        for (const cid of hookMap[h] || []) if (!relatedIds.includes(cid)) relatedIds.push(cid);
+        for (const cid of bodyMention[h] || []) if (!relatedIds.includes(cid)) relatedIds.push(cid);
+      }
     }
     const relatedCards = relatedIds.map((id) => hookMap.__cards[id]).filter(Boolean);
 
-    // ---- 展示层四段（V6 重构）：只讲知识，不讲解析 ----
-    // curated 优先（人工核校内容）；否则自动组装：挂钩句 + 关联卡摘录。
-    // 硬约束：内容不足时不允许用推断填满——只出"它是什么"段 + 关联，不编造。
-    const cur = T1_CONTENT[idCell];
-    const parts = [`**知识点**：${name}`];
-    if (relatedIds.length) parts[0] += ` ｜ **关联卡**：${relatedIds.join('、')}`;
-    parts.push('', '## 它是什么');
+    const ph = hookCodes.map((h) => phraseMap[h]).find(Boolean);
+    const parts = [];
 
-    if (cur && cur.what) {
-      parts.push(cur.what);
+    if (tier === 'A') {
+      // ---- A 档四段式（同 T1-32 用户确认格式） ----
+      parts.push('## 它是什么', cur.what);
+      if (cur.why) parts.push('', '## 为什么这么做', cur.why);
+      if (cur.questions && cur.questions.length) {
+        parts.push('', '## 面试会怎么问', ...cur.questions.map((q, i) => `${i + 1}. ${q}`));
+      }
+      if (relatedIds.length) {
+        const relTitles = relatedCards.map((c) => `- **${c.id}** ${c.title}`).join('\n');
+        parts.push('', '## 关联的完整决策', relTitles);
+      }
     } else {
-      // 挂钩句本身（真实素材句），或从人工核校 fullContent 提取首个实质段
-      let sentence = '';
-      const ph = hookCodes.map((h) => phraseMap[h]).find(Boolean);
-      if (ph) sentence = ph.phrase;
+      // ---- B 档单段式：挂钩句原文 + 关联指引，一段为止 ----
+      let sentence = ph ? ph.phrase : '';
       if (!sentence) {
         for (const h of hookCodes) {
           const cc = CODE_CONTENT[h];
@@ -268,71 +283,22 @@ function parseT1Index(text, hookMap, phraseMap = {}, bodyMention = {}) {
           if (para) { sentence = para; break; }
         }
       }
-      if (sentence) {
-        // 名称与挂钩句去重：完全相同或高相似（词序差异/个别词差异）→ 只出信息量大的一个
-        const strip = (x) => x.replace(/[\s，。；、（）()/]/g, '');
-        const nN = strip(name), nS = strip(sentence);
-        const lcs = (a, b) => {
-          let best = 0;
-          for (let i = 0; i < a.length; i++)
-            for (let j = 0; j < b.length; j++) {
-              let k = 0;
-              while (i + k < a.length && j + k < b.length && a[i + k] === b[j + k]) k++;
-              if (k > best) best = k;
-            }
-          return best;
-        };
-        const sim = lcs(nN, nS) / Math.max(nN.length, nS.length);
-        if (nS === nN || sim >= 0.55) {
-          parts.push(nS.length >= nN.length ? (sentence.endsWith('。') ? sentence : `${sentence}。`) : `${name}。`);
-        } else {
-          parts.push(`${name}——${sentence.replace(/。$/, '')}。`);
-        }
+      parts.push('## 它是什么', sentence ? (sentence.endsWith('。') ? sentence : `${sentence}。`) : `${name}。`);
+      if (relatedIds.length) {
+        parts.push('', `> 完整内容见关联卡：${relatedIds.join('、')}（浏览模式点编号展开）。`);
       } else {
-        parts.push(`${name}。`);
+        parts.push('', '> 素材中此条仅此一句，未做展开。');
       }
-    }
-
-    // 为什么这么做：curated 或关联卡【选择与取舍】+【不这么选会怎样】摘录；无 → 整段跳过
-    const whyParts = [];
-    if (cur && cur.why) {
-      whyParts.push(cur.why);
-    } else {
-      const seenEx = new Set();
-      for (const c of relatedCards.slice(0, 2)) {
-        if (!c.answerMarkdown) continue;
-        const paras = c.answerMarkdown.split(/\n\s*\n/).map((x) => x.trim()).filter(Boolean);
-        for (const tag of ['【选择与取舍】', '【不这么选会怎样】']) {
-          const p = paras.find((x) => x.replace(/\*\*/g, '').startsWith(tag));
-          if (!p) continue;
-          const t = p.replace(/^【[^】]+】\*\*/, '').replace(/^【[^】]+】/, '').replace(/\s+/g, ' ').slice(0, 220);
-          if (t.length > 30 && !seenEx.has(t.slice(0, 20))) {
-            seenEx.add(t.slice(0, 20));
-            whyParts.push(`- （${c.id}）${t}`);
-          }
-        }
-        if (whyParts.length >= 3) break;
-      }
-    }
-    if (whyParts.length) parts.push('', '## 为什么这么做', whyParts.join('\n'));
-
-    // 面试会怎么问：curated 或关联卡追问条目；无 → 整段跳过
-    const qs = cur && cur.questions ? cur.questions : relatedCards.flatMap((c) => (c.questions || []).slice(1, 4).map((q) => `${q}（→ ${c.id}）`)).slice(0, 5);
-    if (qs.length) parts.push('', '## 面试会怎么问', ...qs.map((q, i) => `${i + 1}. ${q}`));
-
-    // 关联的完整决策：有关联才出段，不写"暂无"
-    if (relatedIds.length) {
-      const relTitles = relatedCards.map((c) => `- **${c.id}** ${c.title}`).join('\n');
-      parts.push('', '## 关联的完整决策', relTitles);
     }
 
     // 出处：末尾引用块一行（引用块是允许形式），不进正文
-    const curNote = cur && cur.sourceNote ? `\n\n> 出处：${cur.sourceNote}` : '';
-    const phLine = hookCodes.map((h) => phraseMap[h]).find(Boolean);
-    const srcBlock = curNote || (phLine ? `\n\n> 出处：面试官 Prompt ${phLine.lineName}核心` : '');
+    const srcBlock = cur && cur.sourceNote
+      ? `\n\n> 出处：${cur.sourceNote}`
+      : ph
+        ? `\n\n> 出处：面试官 Prompt ${ph.lineName}核心`
+        : '';
 
-    const answerMarkdown =
-      parts.join('\n').trim() + srcBlock + '\n';
+    const answerMarkdown = parts.join('\n').trim() + srcBlock + '\n';
 
     cards.push({
       id: idCell,
@@ -341,7 +307,8 @@ function parseT1Index(text, hookMap, phraseMap = {}, bodyMention = {}) {
       questions: [name],
       answerMarkdown,
       memoryHook: name,
-      tags: ['T1', ...stars],
+      tags: tier === 'B' ? ['T1', '索引卡', ...stars] : ['T1', ...stars],
+      tier,
       source: hook === '见原表' ? '' : hook,
       redline: false,
       priority: 'T1',

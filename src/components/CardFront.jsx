@@ -10,6 +10,7 @@ export default function CardFront({ card }) {
         <span class="px-2 py-0.5 rounded-full bg-blue-600 text-white font-mono">{card.id}</span>
         <span class="text-gray-500 dark:text-gray-400">{CHAPTER_MAP[card.chapter]}</span>
         {card.redline && <span class="px-2 py-0.5 rounded-full bg-red-600/90 text-white">红线</span>}
+        {card.tier === 'B' && <span class="px-2 py-0.5 rounded-full bg-amber-500/90 text-white">索引卡</span>}
         {card.tags.map((t) => (
           <span key={t} class="px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">
             {t}

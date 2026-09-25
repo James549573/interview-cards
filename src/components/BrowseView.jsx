@@ -98,6 +98,7 @@ export default function BrowseView({ filter, setFilter }) {
               <span class="px-2 py-0.5 rounded-full bg-blue-600 text-white text-xs font-mono shrink-0">{c.id}</span>
               <span class="font-medium text-sm flex-1">{c.title}</span>
               {c.redline && <span class="px-1.5 py-0.5 rounded bg-red-600 text-white text-xs shrink-0">红线</span>}
+              {c.tier === 'B' && <span class="px-1.5 py-0.5 rounded bg-amber-500 text-white text-xs shrink-0">索引卡</span>}
               {c.tags.map((t) => (
                 <span key={t} class="px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-700 text-xs text-gray-500 dark:text-gray-300 shrink-0">
                   {t}
