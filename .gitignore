@@ -4,3 +4,7 @@ dev-dist/
 source/
 .env
 *.local
+
+# V4 verification evidence artifacts
+_verify-v4-output.txt
+_codes-v2.json

@@ -514,6 +514,8 @@ function main() {
     ]
       .filter(Boolean)
       .join('\n');
+    // V5 修复（F-05）：素材段拼接时钩子行与 --- 分隔线粘连（"自述。**---"），补空行恢复分隔
+    c.answerMarkdown = c.answerMarkdown.replace(/([^\n])---/g, '$1\n\n---');
     c.answerMarkdown += note;
   }
 
@@ -549,6 +551,12 @@ function main() {
     if (got[k] !== expect[k]) {
       console.warn(`⚠ ${k} 卡数量 ${got[k]} 与预期 ${expect[k]} 有差距`);
     }
+  }
+
+  // ---- V5 修复（F-05）：素材段拼接时钩子行与 --- 分隔线粘连（"自述。**---"）。
+  // 生成点在素材段装配深处，统一在写出前对所有卡做一次规范化。
+  for (const c of cards) {
+    if (c.answerMarkdown) c.answerMarkdown = c.answerMarkdown.replace(/([^\n])---/g, '$1\n\n---');
   }
 
   const data = {

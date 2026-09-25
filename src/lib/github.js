@@ -82,7 +82,7 @@ export async function pushProgress(pat, gistId, progress, keepalive = false) {
   });
 }
 
-/** 卡片级合并：按每张卡的 updatedAt 取新 */
+/** 卡片级合并：按每张卡的 updatedAt 取新；customNotes（编号补充说明）按条目 updatedAt 取新 */
 export function mergeProgress(local, remote) {
   const result = {
     version: 1,
@@ -95,6 +95,16 @@ export function mergeProgress(local, remote) {
       result.cards[id] = lc;
     }
   }
+  const ln = (local && local.customNotes) || {};
+  const rn = (remote && remote.customNotes) || {};
+  const customNotes = { ...rn };
+  for (const [code, le] of Object.entries(ln)) {
+    const re = customNotes[code];
+    if (!re || (le.updatedAt || 0) > (re.updatedAt || 0)) {
+      customNotes[code] = le;
+    }
+  }
+  result.customNotes = customNotes;
   return result;
 }
 

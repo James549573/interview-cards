@@ -265,30 +265,39 @@ for (const rawCode of [...universe].sort()) {
   }
 
   if (!name && tableRow[code]) {
+    // 优先级③ 表格行：素材中显式表格给出的名称（素材原文，权威性低于人工核校）
     name = tableRow[code].name;
     sourceFile = tableRow[code].file;
     sourceAnchor = tableRow[code].table;
     fullContent = tableRow[code].fullRow;
   } else if (!name && hookFromT1[code]) {
+    // 优先级④ T1 索引挂钩：附录 U 表格行挂钩（素材原文）
     name = hookFromT1[code].name + '（T1 索引挂钩）';
     sourceFile = hookFromT1[code].file;
     sourceAnchor = 'T1 索引表（附录 U）挂钩映射';
-  } else if (hookFromTitle[code]) {
+  } else if (!name && hookFromTitle[code]) {
+    // 优先级⑤ 卡片标题挂钩（素材原文）。V5 修复：补 !name 守卫——此前缺守卫，
+    // 会覆盖① curated 名称（M27/M35/M21 的 name 被 K 卡标题覆盖，与正文矛盾）
     name = hookFromTitle[code].name + '（卡片标题挂钩）';
     sourceFile = hookFromTitle[code].file;
     sourceAnchor = 'K/X 卡标题【已挂钩】';
-  } else if (cardTitleName[code]) {
-    name = cardTitleName[code].name;
-    sourceFile = cardTitleName[code].file;
-    sourceAnchor = code + ' 标题';
-  } else if (t1RowName[code]) {
-    name = t1RowName[code].name;
-    sourceFile = t1RowName[code].file;
-    sourceAnchor = 'T1 索引表（附录 U）';
-  } else if (inlineName[code]) {
-    name = inlineName[code].name;
-    sourceFile = inlineName[code].file;
-    sourceAnchor = '内联定义';
+  }
+
+  if (!name) {
+    // 优先级⑥/⑦/⑧ 自动推断兜底（无人工核校、无挂钩时的最后手段）
+    if (cardTitleName[code]) {
+      name = cardTitleName[code].name;
+      sourceFile = cardTitleName[code].file;
+      sourceAnchor = code + ' 标题';
+    } else if (t1RowName[code]) {
+      name = t1RowName[code].name;
+      sourceFile = t1RowName[code].file;
+      sourceAnchor = 'T1 索引表（附录 U）';
+    } else if (inlineName[code]) {
+      name = inlineName[code].name;
+      sourceFile = inlineName[code].file;
+      sourceAnchor = '内联定义';
+    }
   }
 
   // 人工核校条目直接采用
@@ -325,7 +334,8 @@ for (const rawCode of [...universe].sort()) {
   // 结构化：定义行 + 引用上下文 + 关联卡钩子 + 家族推断（保证 L3 信息量）
   const proseLen = fullContent.replace(/^-\s*\([^)]*\)\s*/gm, '').replace(/\s/g, '').length;
   const parts = [];
-  if (name && name.length < 60) parts.push(`**它是什么**：${name}（${cat}）。`);
+  // M 线无锚点条目在下方 V5 块中给出"素材未定义"完整声明，此处不再推"它是什么"式空转开头
+  if (name && name.length < 60 && !(/^M\d{1,2}$/.test(code) && mLinePool.length)) parts.push(`**它是什么**：${name}（${cat}）。`);
   if (fullContent) parts.push(`**素材中的引用上下文**：\n${fullContent}`);
   if (mentions.length) {
     const hooks = mentions
@@ -338,15 +348,18 @@ for (const rawCode of [...universe].sort()) {
     if (hooks.length) parts.push(`**关联卡记忆钩子**（素材原文）：\n${hooks.join('\n')}`);
   }
   if (proseLen < 100) {
-    // M 线无锚点条目：注入 27 句主题池（诚实声明对应关系素材未提供），不用泛化家族模板
+    // M 线无锚点条目（V5 修复 F-03）：不再铺 27 句主题池全文（答非所问），
+    // 改为"M 素材未定义"明确声明 + 有锚点编号清单 + 用户自补入口提示
     if (/^M\d{1,2}$/.test(code) && mLinePool.length) {
       parts.push(
         [
-          `【素材边界说明（V3 溯源）】素材的 M 线"核心"仅提供以下 ${mLinePool.length} 个主题分句，**未提供 M1–M35 的逐条编号对应**（分句顺序与编号不线性相关：如 M35 的实锚在 K-13"越权负样本 ≥50 条"，而非第 35 句）。因此本编号无法可靠映射到具体主题句，以下是完整主题池供参考；面试被问到时，请先说明你掌握的是有锚点的决策（如 M23 范围裁决 / M31 下钻边界 / M35 越权负样本），不要为无锚点编号编造对应。`,
+          `**${code} · 素材未定义**（素材只提供编号引用，未提供内容）`,
           '',
-          ...mLinePool.map((p, i) => `${i + 1}. ${p}`),
+          '【素材边界说明（V5 复核）】素材的 M 线"核心"（Prompt 管理线行）仅提供 27 个主题分句，未提供 M1–M35 的逐条编号对应；且本编号在素材全文中出现 0 次（无引用、无卡片挂钩）。经挂钩锚点与主题句逐字核对（M15↔"极高风险五件套+CL-19"、M34↔"批8三处放松"、M28↔"结构不变量验收"、M31↔"数据下钻边界"），已确认归属的主题句均属有锚点编号，剩余句无法可靠分配到具体编号——**本编号的具体内容，素材中未提供**，需回底层 D 系列文档查证。',
           '',
-          '【有明确引用锚点的 M 编号】M0/M2（K-25）、M4/M5/M6（K-23）、M12（K-01）、M21（K-25/K-31）、M23（K-24）、M24/M25/M26（K-26）、M27（K-19/K-33）、M28（K-22）、M31（K-20）、M35（K-13）——这些编号的语义以挂钩卡为准。'
+          '【有明确引用锚点的 M 编号（语义以挂钩卡为准）】M1/M29（X-05）、M2/M21（K-25）、M4/M5/M6（K-23）、M11（X-04）、M12（K-01）、M15（X-06）、M22（X-07）、M23（K-24）、M24/M25/M26（K-26）、M27（K-19/K-33）、M28（K-22）、M31（K-20）、M34（X-08）、M35（K-27/K-31）。',
+          '',
+          '【补充说明】如果你在底层材料里找到本编号的定义，可在卡片页点"补充说明"记下你的答案，会保存并随进度同步。'
         ].join('\n')
       );
     } else {

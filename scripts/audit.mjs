@@ -269,7 +269,7 @@ if (codesJson) {
   for (const c of Object.values(codesJson.codes)) {
     if (!c.name || !/未展开|未单独/.test(c.name)) continue;
     const code = c.code;
-    const defRe = new RegExp('(^|[^A-Za-z0-9-])' + code.replace(/[-]/g, '\\-') + '\\s*[-——:：\\s]\\s*[^，。；\\n]{4,}');
+    const defRe = new RegExp('(^|[^A-Za-z0-9-])' + code.replace(/[-]/g, '\\-') + '\\s*[-——:：\\s「]\\s*[^，。；\\n]{4,}');
     let found = null;
     for (const [f, t] of Object.entries(texts)) {
       for (const l of t.split('\n')) {
@@ -292,6 +292,79 @@ for (const c of cards) {
   if (srcLen > 0 && c.answerMarkdown.length < srcLen * 0.8) {
     add('V3-loss-' + c.id, 'V3 内容漏读', '高', c.id, `卡片 ${c.answerMarkdown.length} 字 < 素材源段 ${srcLen} 字的 80%`, '检查解析截断', 'F-03');
   }
+}
+
+// ---------- V5：name/正文一致性 + 过度填充 + A′ 挂钩核查 ----------
+console.log('\n== V5 一致性核查 ==');
+
+// 最长公共子串（用于 name 与 fullContent 主题的相似度判断）
+function lcsLen(a, b) {
+  let best = 0;
+  for (let i = 0; i < a.length; i++) {
+    for (let j = 0; j < b.length; j++) {
+      if (a[i] === b[j]) {
+        let k = 1;
+        while (i + k < a.length && j + k < b.length && a[i + k] === b[j + k]) k++;
+        if (k > best) best = k;
+      }
+    }
+  }
+  return best;
+}
+
+if (codesJson) {
+  // V5-R1: name 与 fullContent 首标题矛盾（M27 案例：name"三步法"、正文"越权门槛写死"）
+  // 规则：fullContent 首行 "**CODE · 主题**" 提取主题；name 与主题既不互相包含、
+  // 且最长公共子串 < 4 字 → 报警。诚实未定义条目（name/theme 含"未展开/未定义"）跳过。
+  for (const c of Object.values(codesJson.codes)) {
+    const fc = c.fullContent || '';
+    const m = fc.match(/^\*\*(?:[A-Za-z0-9\-]+)\s*·\s*(.+?)\*\*/m);
+    if (!m || !c.name) continue;
+    const theme = m[1].trim();
+    const nameCore = c.name.replace(/（[^）]*）/g, '').trim();
+    if (/未展开|未定义|未逐条|未单独/.test(c.name + theme)) continue; // 诚实未定义合法（用原始 name 判断，括号内的"未逐条"也算）
+    const contained = nameCore.includes(theme) || theme.includes(nameCore);
+    const sim = lcsLen(nameCore, theme);
+    if (!contained && sim < 4) {
+      add('V5-name-' + c.code, 'V5 name/正文矛盾', '高', c.code, `name="${c.name.slice(0, 40)}" 与正文主题"${theme.slice(0, 40)}"不匹配`, '修正 name 或正文，二者必须一致', 'F-02');
+    }
+  }
+
+  // V5-R2: 过度填充掩盖缺失（V4 任务书规则）——fullContent > 800 字但 name 标"未展开"
+  for (const c of Object.values(codesJson.codes)) {
+    if ((c.fullContent || '').length > 800 && /未展开|未定义|未单独/.test(c.name || '')) {
+      add('V5-stuff-' + c.code, 'V5 过度填充', '中', c.code, `fullContent ${(c.fullContent || '').length} 字但 name 标"未展开"（疑似用长内容掩盖缺失）`, '收缩为诚实声明或映射真实内容', 'F-03');
+    }
+  }
+
+  // V5-R3: A′ 挂钩核查——R21 的 A′ 条目取自 K-17 正文，依据是 K-17 标题挂钩含 R21；
+  // 源卡标题挂钩不含目标编号 → A′ 不成立（V5 复核 1 的程序化守护）
+  const A_PRIME_CLAIMS = [
+    { target: 'R21', card: 'K-17', note: 'R21 条目 10~12 标 A′，依据 K-17 标题挂钩 R21' }
+  ];
+  for (const claim of A_PRIME_CLAIMS) {
+    let title = null;
+    for (const [, t] of Object.entries(texts)) {
+      const m = t.match(new RegExp('^### ' + claim.card.replace('-', '\\-') + '[^\\n]*', 'm'));
+      if (m) { title = m[0]; break; }
+    }
+    if (!title) {
+      add('V5-aprime-' + claim.target, 'V5 A′源卡缺失', '高', claim.target, `A′ 依据卡 ${claim.card} 在素材中不存在`, '核对', 'F-01');
+    } else {
+      const hookM = title.match(/【已挂钩([^\]]*)】/);
+      const codes = hookM ? hookM[1].split(/[\/、,，\s]+/).map((s) => s.trim()).filter(Boolean) : [];
+      if (!codes.includes(claim.target)) {
+        add('V5-aprime-' + claim.target, 'V5 A′挂钩不成立', '高', claim.target, `${claim.note}，但 ${claim.card} 标题挂钩为 [${codes.join('/')}]，不含 ${claim.target} → 该 A′ 应降级 B`, '降级并修正卡头声明', 'F-01');
+      }
+    }
+  }
+
+  // V5 汇总
+  const v5 = problems.filter((p) => p.dim.startsWith('V5'));
+  console.log('name/正文矛盾:', problems.filter((p) => p.id.startsWith('V5-name')).length);
+  console.log('过度填充（>800 字且标未展开）:', problems.filter((p) => p.id.startsWith('V5-stuff')).length);
+  console.log('A′ 挂钩不成立:', problems.filter((p) => p.id.startsWith('V5-aprime')).length);
+  if (!v5.length) console.log('V5 全部规则: 通过（0 问题）');
 }
 
 // ---------- 输出 ----------

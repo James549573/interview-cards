@@ -3,6 +3,7 @@ import { storage, KEYS } from './lib/storage';
 import { CARDS, CHAPTER_MAP } from './lib/cards';
 import { verifyPat, findOrCreateGist, fetchProgress, mergeProgress, pushProgress, createUploader } from './lib/github';
 import { todayStats } from './lib/srs';
+import { syncFromProgress, onChange as onNoteChange } from './lib/notes';
 import LoginPage from './components/LoginPage.jsx';
 import TopBar from './components/TopBar.jsx';
 import BrowseView from './components/BrowseView.jsx';
@@ -38,6 +39,31 @@ export function App() {
   useEffect(() => {
     storage.set(KEYS.progress, progress);
   }, [progress]);
+
+  // 编号补充说明（方案 A）：progress 变化后刷新组件缓存；组件保存时并入 progress 并触发 Gist 同步
+  useEffect(() => {
+    syncFromProgress(progress);
+  }, [progress]);
+  useEffect(() => {
+    return onNoteChange((evt) => {
+      if (evt && evt.type === 'save') {
+        setProgress((p) => ({
+          ...p,
+          updatedAt: Date.now(),
+          customNotes: { ...(p.customNotes || {}), [evt.code]: evt.entry }
+        }));
+        uploader.schedule();
+      } else if (evt && evt.type === 'delete') {
+        setProgress((p) => {
+          const customNotes = { ...(p.customNotes || {}) };
+          delete customNotes[evt.code];
+          return { ...p, updatedAt: Date.now(), customNotes };
+        });
+        uploader.schedule();
+      }
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     storage.set(KEYS.filter, filter);
@@ -138,10 +164,10 @@ export function App() {
               showToast('已导入并合并');
             }}
             onClearLocal={() => {
-              const empty = { version: 1, updatedAt: Date.now(), cards: {} };
+              const empty = { version: 1, updatedAt: Date.now(), cards: {}, customNotes: progress.customNotes || {} };
               setProgress(empty);
               storage.set(KEYS.progress, empty);
-              showToast('本地进度已清空');
+              showToast('本地进度已清空（补充说明已保留）');
             }}
             onLogout={() => logout()}
           />
