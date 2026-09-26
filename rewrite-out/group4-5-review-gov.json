@@ -1,0 +1,189 @@
+[
+  {
+    "id": "K-27",
+    "verdict": "pass",
+    "issues": []
+  },
+  {
+    "id": "K-28",
+    "verdict": "pass",
+    "issues": []
+  },
+  {
+    "id": "K-29",
+    "verdict": "pass",
+    "issues": []
+  },
+  {
+    "id": "K-30",
+    "verdict": "pass",
+    "issues": []
+  },
+  {
+    "id": "K-31",
+    "verdict": "pass",
+    "issues": []
+  },
+  {
+    "id": "K-32",
+    "verdict": "pass",
+    "issues": []
+  },
+  {
+    "id": "K-33",
+    "verdict": "pass",
+    "issues": []
+  },
+  {
+    "id": "K-34",
+    "verdict": "pass",
+    "issues": []
+  },
+  {
+    "id": "X-01",
+    "verdict": "pass",
+    "issues": []
+  },
+  {
+    "id": "X-02",
+    "verdict": "revise",
+    "issues": [
+      {
+        "type": "政策口径",
+        "quote": "审核与审计是 fail-closed 段，不是可降级段，失败即阻断，不放行",
+        "why": "素材 K-21 明确审核按场景分级：普通场景 fail-open（放行+异步补审留痕），仅审计一律 fail-closed",
+        "fix": "改为：仅审计与配额一律 fail-closed；审核按场景分级表述，普通场景失败放行并异步补审留痕，高风险（招生/派位/安全/心理）可配 fail-closed"
+      }
+    ]
+  },
+  {
+    "id": "X-03",
+    "verdict": "revise",
+    "issues": [
+      {
+        "type": "政策口径",
+        "quote": "外部依赖一律 fail-closed：商用内容安全 API 超时或不可用时，以本地三级结论为准",
+        "why": "本地三级已实际完成审核，此处置既非 fail-open 也非 fail-closed；'一律 fail-closed'与 K-21 场景分级口径冲突",
+        "fix": "按 K-21 分级表述：商用 API 仅作补充，不可用时以本地结论为准属正常降级；审核的 fail-open/fail-closed 按场景分级，审计才是一律 fail-closed"
+      }
+    ]
+  },
+  {
+    "id": "X-04",
+    "verdict": "pass",
+    "issues": []
+  },
+  {
+    "id": "X-05",
+    "verdict": "pass",
+    "issues": []
+  },
+  {
+    "id": "X-06",
+    "verdict": "pass",
+    "issues": []
+  },
+  {
+    "id": "X-07",
+    "verdict": "pass",
+    "issues": []
+  },
+  {
+    "id": "X-08",
+    "verdict": "pass",
+    "issues": []
+  },
+  {
+    "id": "T1-09",
+    "verdict": "pass",
+    "issues": []
+  },
+  {
+    "id": "T1-10",
+    "verdict": "pass",
+    "issues": []
+  },
+  {
+    "id": "T1-11",
+    "verdict": "pass",
+    "issues": []
+  },
+  {
+    "id": "T1-12",
+    "verdict": "pass",
+    "issues": []
+  },
+  {
+    "id": "T1-13",
+    "verdict": "pass",
+    "issues": []
+  },
+  {
+    "id": "T1-14",
+    "verdict": "pass",
+    "issues": []
+  },
+  {
+    "id": "T1-15",
+    "verdict": "pass",
+    "issues": []
+  },
+  {
+    "id": "T1-16",
+    "verdict": "pass",
+    "issues": []
+  },
+  {
+    "id": "T1-17",
+    "verdict": "pass",
+    "issues": []
+  },
+  {
+    "id": "T1-18",
+    "verdict": "pass",
+    "issues": []
+  },
+  {
+    "id": "T1-19",
+    "verdict": "pass",
+    "issues": []
+  },
+  {
+    "id": "T1-20",
+    "verdict": "pass",
+    "issues": []
+  },
+  {
+    "id": "T1-21",
+    "verdict": "pass",
+    "issues": []
+  },
+  {
+    "id": "T1-22",
+    "verdict": "pass",
+    "issues": []
+  },
+  {
+    "id": "T1-23",
+    "verdict": "revise",
+    "issues": [
+      {
+        "type": "政策口径",
+        "quote": "RAG 侧三级为 L1 关键词 / L2 缓存 / L3 拒答，L3 不自由生成（与 T1-29 同源）",
+        "why": "素材明确三级降级未逐级披露具体内容、'不要编造'；L1=关键词、L2=缓存属编造具体层级",
+        "fix": "删去 L1/L2 具体指代，改为'逐级降低回答丰富度/时效，最低一级明确拒答+转人工'，与素材披露的降级原则一致"
+      },
+      {
+        "type": "红线软化",
+        "quote": "RAG 侧 L2 是缓存层，但缓存键含 scope 禁止跨租户、结果必须带数据快照时刻",
+        "why": "K-05 硬约束为'三级降级不展示缓存结果'，给缓存开降级通道等于允许拿旧数做决策",
+        "fix": "降级链任何层级不返回缓存结果；scope 键与快照时刻是正常缓存服务的约束，不作为降级放行依据"
+      }
+    ]
+  },
+  {
+    "id": "T1-24",
+    "verdict": "pass",
+    "issues": []
+  }
+]

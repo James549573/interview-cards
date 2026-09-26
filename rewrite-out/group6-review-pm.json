@@ -1,0 +1,123 @@
+[
+  {
+    "id": "T1-25",
+    "verdict": "pass",
+    "issues": []
+  },
+  {
+    "id": "T1-26",
+    "verdict": "pass",
+    "issues": []
+  },
+  {
+    "id": "T1-27",
+    "verdict": "pass",
+    "issues": []
+  },
+  {
+    "id": "T1-28",
+    "verdict": "revise",
+    "issues": [
+      {
+        "type": "口径无人拍板",
+        "quote": "这 6 张表作为\"形态\"统一随 INF-03 计提 50%，不新增计提对象",
+        "why": "INF-03 是什么、计提基数是什么，卡内零交代，计提结论凭空出现",
+        "fix": "补一句 INF-03 指哪个交付形态、为何这 6 张表归入其中；或删掉计提句，让卡聚焦显式列决策"
+      }
+    ]
+  },
+  {
+    "id": "T1-29",
+    "verdict": "pass",
+    "issues": []
+  },
+  {
+    "id": "T1-30",
+    "verdict": "pass",
+    "issues": []
+  },
+  {
+    "id": "T1-31",
+    "verdict": "pass",
+    "issues": []
+  },
+  {
+    "id": "T1-32",
+    "verdict": "pass",
+    "issues": []
+  },
+  {
+    "id": "T1-33",
+    "verdict": "pass",
+    "issues": []
+  },
+  {
+    "id": "T1-34",
+    "verdict": "pass",
+    "issues": []
+  },
+  {
+    "id": "T1-35",
+    "verdict": "pass",
+    "issues": []
+  },
+  {
+    "id": "T1-36",
+    "verdict": "pass",
+    "issues": []
+  },
+  {
+    "id": "T1-37",
+    "verdict": "pass",
+    "issues": []
+  },
+  {
+    "id": "T1-38",
+    "verdict": "pass",
+    "issues": []
+  },
+  {
+    "id": "T1-39",
+    "verdict": "revise",
+    "issues": [
+      {
+        "type": "口径无人拍板",
+        "quote": "3. 发现承建方自查违反 CL-13 怎么处置？",
+        "why": "卡自己抛出违约处置问题却不给答案，真项目违约必须有认定人和处置路径",
+        "fix": "补处置链：甲方认定违约、开 ISSUE-xxx 整改单、暂停该环节验收签字、按合同违约条款追责"
+      }
+    ]
+  },
+  {
+    "id": "T1-40",
+    "verdict": "pass",
+    "issues": []
+  },
+  {
+    "id": "APP-A",
+    "verdict": "pass",
+    "issues": []
+  },
+  {
+    "id": "APP-F",
+    "verdict": "pass",
+    "issues": []
+  },
+  {
+    "id": "APP-H",
+    "verdict": "revise",
+    "issues": [
+      {
+        "type": "缺交付现实感",
+        "quote": "C3 知识点包生产未显式指定模型，默认统一 hy4 preview",
+        "why": "C3/C4/C5/C10 是卡片生产日志（模型版本、额度、无人值守、模拟验证），不是项目交付事项",
+        "fix": "删除 C3/C4/C5/C10 或移出待确认清单，保留与项目口径相关的 C 系列条目"
+      }
+    ]
+  },
+  {
+    "id": "APP-T",
+    "verdict": "pass",
+    "issues": []
+  }
+]

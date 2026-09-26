@@ -1,0 +1,108 @@
+[
+  {
+    "id": "K-10",
+    "verdict": "pass",
+    "issues": []
+  },
+  {
+    "id": "K-11",
+    "verdict": "pass",
+    "issues": []
+  },
+  {
+    "id": "K-12",
+    "verdict": "pass",
+    "issues": []
+  },
+  {
+    "id": "K-13",
+    "verdict": "pass",
+    "issues": []
+  },
+  {
+    "id": "K-14",
+    "verdict": "pass",
+    "issues": []
+  },
+  {
+    "id": "K-15",
+    "verdict": "pass",
+    "issues": []
+  },
+  {
+    "id": "K-16",
+    "verdict": "pass",
+    "issues": []
+  },
+  {
+    "id": "K-17",
+    "verdict": "revise",
+    "issues": [
+      {
+        "type": "背景不符",
+        "quote": "AI-602 的「三键锁定」（county_code + apply_year + 学段）是过滤条件，不是第三路",
+        "why": "BRIEF 第二节写三键为 county_code / 学段 / 学科，第三键口径不一致（source 为 apply_year）",
+        "fix": "与 BRIEF 维护方核对统一第三键（apply_year 或 学科）；若以 source 为准则回改 BRIEF，两处不能各说各话"
+      }
+    ]
+  },
+  {
+    "id": "K-18",
+    "verdict": "pass",
+    "issues": []
+  },
+  {
+    "id": "K-19",
+    "verdict": "pass",
+    "issues": []
+  },
+  {
+    "id": "K-20",
+    "verdict": "revise",
+    "issues": [
+      {
+        "type": "丢失事实",
+        "quote": "那条管**纵向**（能不能跨年份把一个孩子攒出一整份档案）",
+        "why": "原卡与 source 均标注该纵向规则出自 AI-401 断言 V17，重写稿把编号与归属一起丢了",
+        "fix": "补回：AI-401 V17 管的是纵向；断言编号是面试硬资本，不能在改写中蒸发"
+      }
+    ]
+  },
+  {
+    "id": "K-21",
+    "verdict": "revise",
+    "issues": [
+      {
+        "type": "编造",
+        "quote": "\"可配\"留给尚未定级的场景，但默认取 fail-closed，下调配置要显式审批并留痕",
+        "why": "source 只有\"可配……实际等同强制\"；\"默认取 fail-closed、下调需显式审批\"是素材外新增的项目配置事实",
+        "fix": "改为设计主张口吻（\"该类场景应当默认 fail-closed，下调需显式审批\"），避免被追问出处时无法兜底"
+      }
+    ]
+  },
+  {
+    "id": "K-22",
+    "verdict": "pass",
+    "issues": []
+  },
+  {
+    "id": "K-23",
+    "verdict": "pass",
+    "issues": []
+  },
+  {
+    "id": "K-24",
+    "verdict": "pass",
+    "issues": []
+  },
+  {
+    "id": "K-25",
+    "verdict": "pass",
+    "issues": []
+  },
+  {
+    "id": "K-26",
+    "verdict": "pass",
+    "issues": []
+  }
+]

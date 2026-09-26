@@ -14,6 +14,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { CONTENT as CODE_CONTENT, buildPhraseContent } from './code-knowledge.mjs';
 import { T1_CONTENT, T1_A } from './t1-knowledge.mjs';
+import { CARD_OVERRIDES } from './card-overrides.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const DEFAULT_DIR = 'C:\\Users\\admin\\WorkBuddy\\2026-09-24-22-32-06\\outputs\\interview_prep';
@@ -553,6 +554,25 @@ function main() {
   for (const c of cards) {
     if (c.answerMarkdown) c.answerMarkdown = c.answerMarkdown.replace(/([^\n])---/g, '$1\n\n---');
   }
+
+  // ---- V8：多专家协作重写覆盖层（展示层可懂化）----
+  // card-overrides.mjs 由写手稿合并生成（五角色流水线：写手→架构/事实→政务→PM→面试官→修订），
+  // 覆盖在解析产物之上；覆盖后重算 T1 的 A/B 档（有"为什么这么做"段即为 A 档完整卡）。
+  let overrideCount = 0;
+  for (const c of cards) {
+    const ov = CARD_OVERRIDES[c.id];
+    if (!ov || !ov.answerMarkdown) continue;
+    c.answerMarkdown = ov.answerMarkdown;
+    if (c.id.startsWith('T1-')) {
+      const full = c.answerMarkdown.includes('## 为什么这么做');
+      c.tier = full ? 'A' : 'B';
+      const hasBadge = c.tags.includes('索引卡');
+      if (!full && !hasBadge) c.tags.push('索引卡');
+      if (full && hasBadge) c.tags = c.tags.filter((t) => t !== '索引卡');
+    }
+    overrideCount++;
+  }
+  console.log(`✓ V8 覆盖层：${overrideCount} 张卡应用多专家重写稿`);
 
   const data = {
     version: 1,

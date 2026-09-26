@@ -1,0 +1,137 @@
+[
+  {
+    "id": "T1-25",
+    "verdict": "revise",
+    "issues": [
+      {
+        "type": "会被问穿",
+        "quote": "重排（rerank）模型用**本地部署**的 BGE-reranker-v2-m3（Top50 → Top5）",
+        "why": "Top50→Top5 写在首句，但档位依据全卡没有，第三层问数字哪来的必卡壳",
+        "fix": "补定性依据：重排是最贵环节，50 进 5 是召回质量与算力、延迟预算的平衡点，档位可按评测集调整"
+      }
+    ]
+  },
+  {
+    "id": "T1-26",
+    "verdict": "pass",
+    "issues": []
+  },
+  {
+    "id": "T1-27",
+    "verdict": "revise",
+    "issues": [
+      {
+        "type": "会被问穿",
+        "quote": "1. 四项用途分别是什么？（要能逐条报出，不能含糊）",
+        "why": "卡的主题就是四项用途，却没列出是哪四项，逐条报出无从背起",
+        "fix": "在【它是什么】逐条列出四项允许用途，各配一个落点示例（对应列名或 CHECK 写法）"
+      }
+    ]
+  },
+  {
+    "id": "T1-28",
+    "verdict": "revise",
+    "issues": [
+      {
+        "type": "过度堆砌",
+        "quote": "计提对象是形态不是场景，这 6 张表作为“形态”统一随 INF-03 计提 50%",
+        "why": "计提口径与显式列主题无关，混入后焦点涣散，还引出 50% 这个需另解释的数",
+        "fix": "删掉该条，或压缩成关联卡一行：计提归属见 INF-03 相关卡"
+      }
+    ]
+  },
+  {
+    "id": "T1-29",
+    "verdict": "revise",
+    "issues": [
+      {
+        "type": "会被问穿",
+        "quote": "降级必须留痕、不展示缓存结果（K-05）",
+        "why": "与 L2 缓存命中自相矛盾：该规则属 AI-410 溯源降级，与 RAG 检索降级是两条链路",
+        "fix": "写明两条链路：RAG L2 缓存须过权限与时效校验后可用；不展示缓存结果仅指 AI-410 溯源降级"
+      }
+    ]
+  },
+  {
+    "id": "T1-30",
+    "verdict": "pass",
+    "issues": []
+  },
+  {
+    "id": "T1-31",
+    "verdict": "pass",
+    "issues": []
+  },
+  {
+    "id": "T1-32",
+    "verdict": "pass",
+    "issues": []
+  },
+  {
+    "id": "T1-33",
+    "verdict": "pass",
+    "issues": []
+  },
+  {
+    "id": "T1-34",
+    "verdict": "revise",
+    "issues": [
+      {
+        "type": "会被问穿",
+        "quote": "身份可去：去标识必须是可执行的技术动作，不能只是合同承诺。",
+        "why": "只说必须可执行，没说动作是什么，第二层问具体怎么落地时无内容可答",
+        "fix": "补机制：身份字段以映射 ID 替换、明文标识不进业务库，映射关系单独管控并限用途"
+      }
+    ]
+  },
+  {
+    "id": "T1-35",
+    "verdict": "pass",
+    "issues": []
+  },
+  {
+    "id": "T1-36",
+    "verdict": "pass",
+    "issues": []
+  },
+  {
+    "id": "T1-37",
+    "verdict": "pass",
+    "issues": []
+  },
+  {
+    "id": "T1-38",
+    "verdict": "pass",
+    "issues": []
+  },
+  {
+    "id": "T1-39",
+    "verdict": "pass",
+    "issues": []
+  },
+  {
+    "id": "T1-40",
+    "verdict": "pass",
+    "issues": []
+  },
+  {
+    "id": "APP-A",
+    "verdict": "pass",
+    "issues": []
+  },
+  {
+    "id": "APP-F",
+    "verdict": "pass",
+    "issues": []
+  },
+  {
+    "id": "APP-H",
+    "verdict": "pass",
+    "issues": []
+  },
+  {
+    "id": "APP-T",
+    "verdict": "pass",
+    "issues": []
+  }
+]

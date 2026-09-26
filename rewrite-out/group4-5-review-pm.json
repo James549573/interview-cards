@@ -1,0 +1,190 @@
+[
+  {
+    "id": "K-27",
+    "verdict": "pass",
+    "issues": []
+  },
+  {
+    "id": "K-28",
+    "verdict": "pass",
+    "issues": []
+  },
+  {
+    "id": "K-29",
+    "verdict": "revise",
+    "issues": [
+      {
+        "type": "缺交付现实感",
+        "quote": "把 0.70 之上的人工抽检常态化：不是抽样复核出了问题才查，而是高置信件按比例固定回看",
+        "why": "比例多少、人力算谁的没讲；与已有 V13 ≥5% 抽样复核什么关系也没说。按人日对账的项目里这是一笔真账。",
+        "fix": "补一句：抽检并入 V13 抽样复核盘子还是另列人日，比例量级与人力归属点明；省级项目新增常态人力必须有账可挂。"
+      }
+    ]
+  },
+  {
+    "id": "K-30",
+    "verdict": "pass",
+    "issues": []
+  },
+  {
+    "id": "K-31",
+    "verdict": "pass",
+    "issues": []
+  },
+  {
+    "id": "K-32",
+    "verdict": "pass",
+    "issues": []
+  },
+  {
+    "id": "K-33",
+    "verdict": "pass",
+    "issues": []
+  },
+  {
+    "id": "K-34",
+    "verdict": "pass",
+    "issues": []
+  },
+  {
+    "id": "X-01",
+    "verdict": "revise",
+    "issues": [
+      {
+        "type": "缺交付现实感",
+        "quote": "新旧分层并行跑一段时间，按应用逐个切换 ADS 的读取来源，口径对不上就退回旧表",
+        "why": "「口径对不上」谁认定、按什么口径对账没讲；双跑期多养一套分层的人日成本归属也没讲。",
+        "fix": "补：对账以 schema.dbml 权威口径为尺，差异由甲乙双方联合确认；双跑期人力计入人力基线并在里程碑挂账。"
+      }
+    ]
+  },
+  {
+    "id": "X-02",
+    "verdict": "pass",
+    "issues": []
+  },
+  {
+    "id": "X-03",
+    "verdict": "pass",
+    "issues": []
+  },
+  {
+    "id": "X-04",
+    "verdict": "pass",
+    "issues": []
+  },
+  {
+    "id": "X-05",
+    "verdict": "pass",
+    "issues": []
+  },
+  {
+    "id": "X-06",
+    "verdict": "pass",
+    "issues": []
+  },
+  {
+    "id": "X-07",
+    "verdict": "pass",
+    "issues": []
+  },
+  {
+    "id": "X-08",
+    "verdict": "pass",
+    "issues": []
+  },
+  {
+    "id": "T1-09",
+    "verdict": "revise",
+    "issues": [
+      {
+        "type": "没讲代价",
+        "quote": "（会，这是刻意的：G9 不满足整体不上线，无例外）",
+        "why": "只答「是刻意的」等于把审批僵局原样甩给甲方；真实交付里还得给推动甲方评审的动作，否则就是无限期等。",
+        "fix": "补推动机制：指标需求按批评审、甲方评审人日参照 CL-03/04 合同化挂账，把「等审批」变成有后果条款的排期。"
+      }
+    ]
+  },
+  {
+    "id": "T1-10",
+    "verdict": "pass",
+    "issues": []
+  },
+  {
+    "id": "T1-11",
+    "verdict": "pass",
+    "issues": []
+  },
+  {
+    "id": "T1-12",
+    "verdict": "pass",
+    "issues": []
+  },
+  {
+    "id": "T1-13",
+    "verdict": "pass",
+    "issues": []
+  },
+  {
+    "id": "T1-14",
+    "verdict": "revise",
+    "issues": [
+      {
+        "type": "口径无人拍板",
+        "quote": "高频、关键的问题由人工校准过「问题 → 指标 + 维度 + 筛选」的映射，并确认过口径。",
+        "why": "校准、确认是谁没讲。每条映射都是一次口径认定，承建方自校自认的库，验收时甲方有权整批不认。",
+        "fix": "补：承建方起草、甲方业务处室逐条确认后生效，工作量挂 CL-03/04 甲方人日；未确认条目不得入库优先命中。"
+      }
+    ]
+  },
+  {
+    "id": "T1-15",
+    "verdict": "pass",
+    "issues": []
+  },
+  {
+    "id": "T1-16",
+    "verdict": "pass",
+    "issues": []
+  },
+  {
+    "id": "T1-17",
+    "verdict": "pass",
+    "issues": []
+  },
+  {
+    "id": "T1-18",
+    "verdict": "pass",
+    "issues": []
+  },
+  {
+    "id": "T1-19",
+    "verdict": "pass",
+    "issues": []
+  },
+  {
+    "id": "T1-20",
+    "verdict": "pass",
+    "issues": []
+  },
+  {
+    "id": "T1-21",
+    "verdict": "pass",
+    "issues": []
+  },
+  {
+    "id": "T1-22",
+    "verdict": "pass",
+    "issues": []
+  },
+  {
+    "id": "T1-23",
+    "verdict": "pass",
+    "issues": []
+  },
+  {
+    "id": "T1-24",
+    "verdict": "pass",
+    "issues": []
+  }
+]

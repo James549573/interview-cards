@@ -1,0 +1,122 @@
+[
+  {
+    "id": "T1-25",
+    "verdict": "pass",
+    "issues": []
+  },
+  {
+    "id": "T1-26",
+    "verdict": "pass",
+    "issues": []
+  },
+  {
+    "id": "T1-27",
+    "verdict": "pass",
+    "issues": []
+  },
+  {
+    "id": "T1-28",
+    "verdict": "pass",
+    "issues": []
+  },
+  {
+    "id": "T1-29",
+    "verdict": "pass",
+    "issues": []
+  },
+  {
+    "id": "T1-30",
+    "verdict": "pass",
+    "issues": []
+  },
+  {
+    "id": "T1-31",
+    "verdict": "pass",
+    "issues": []
+  },
+  {
+    "id": "T1-32",
+    "verdict": "pass",
+    "issues": []
+  },
+  {
+    "id": "T1-33",
+    "verdict": "pass",
+    "issues": []
+  },
+  {
+    "id": "T1-34",
+    "verdict": "revise",
+    "issues": [
+      {
+        "type": "政策口径",
+        "quote": "期限落成 retention_until 字段（≥ 起始日 + 6 个月），到期销毁",
+        "why": "申诉/争议未决时到期即销毁会断证据链，与卡内「申诉复盘依赖该窗口」自相矛盾",
+        "fix": "补一句：涉未决申诉、争议或审计事项的记录到期冻结顺延，销毁动作本身留审批与留痕"
+      }
+    ]
+  },
+  {
+    "id": "T1-35",
+    "verdict": "pass",
+    "issues": []
+  },
+  {
+    "id": "T1-36",
+    "verdict": "revise",
+    "issues": [
+      {
+        "type": "敏感场景",
+        "quote": "识别、转介、接手每一步留痕，可审计",
+        "why": "留痕内容含未成年敏感自述，属敏感个人信息，未提最小化与知悉范围控制",
+        "fix": "留痕记动作与状态；自述内容最小化存储，知悉范围限授权人员并单独管控"
+      },
+      {
+        "type": "敏感场景",
+        "quote": "有明确接手方与时限，进入有 SLA 追踪的人工流程",
+        "why": "接手方未落到法定处置主体，转介可能空转，等于无人接手",
+        "fix": "接手方明确到学校法定处置流程；达到风险等级时的监护人告知环节写明"
+      }
+    ]
+  },
+  {
+    "id": "T1-37",
+    "verdict": "pass",
+    "issues": []
+  },
+  {
+    "id": "T1-38",
+    "verdict": "pass",
+    "issues": []
+  },
+  {
+    "id": "T1-39",
+    "verdict": "pass",
+    "issues": []
+  },
+  {
+    "id": "T1-40",
+    "verdict": "pass",
+    "issues": []
+  },
+  {
+    "id": "APP-A",
+    "verdict": "pass",
+    "issues": []
+  },
+  {
+    "id": "APP-F",
+    "verdict": "pass",
+    "issues": []
+  },
+  {
+    "id": "APP-H",
+    "verdict": "pass",
+    "issues": []
+  },
+  {
+    "id": "APP-T",
+    "verdict": "pass",
+    "issues": []
+  }
+]
