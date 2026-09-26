@@ -18,3 +18,6 @@ SAMPLE_BEFORE_AFTER.md
 
 _cards-prev.json
 SAMPLE10_V7.md
+
+rewrite-out/_live-bundle.js
+_live-bundle.js
