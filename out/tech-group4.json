@@ -1,0 +1,856 @@
+[
+  {
+    "id": "T4-001",
+    "chapter": "tech4",
+    "title": "权限",
+    "questions": [
+      "Linux 文件权限机制是怎么设计的?",
+      "umask 如何影响新建文件的默认权限?",
+      "SUID、SGID、粘滞位分别解决什么问题、有什么风险?",
+      "sudo 提权与最小权限原则如何平衡?"
+    ],
+    "answerMarkdown": "## 结论\nLinux 权限模型把 rwx(读/写/执行)三位作用在属主、属组、其他三个角色上,用 chmod 的数字(4/2/1 相加)或符号方式修改,chown/chgrp 变更归属。设计核心是「最小权限」:服务用专用低权限账号运行,不该给 root 就不给。\n\n## 原理与边界\nrwx 对文件和目录语义不同:文件的 x 是「可执行」,目录的 x 是「可进入」。数字是三位二进制,755 即属主 7(读写执行)、属组与其他 5(读执行)。umask 从默认权限里「扣」位,新建文件 666、目录 777 减去 umask,所以 umask 022 下文件是 644。特殊权限里 SUID 让可执行文件以属主身份运行(典型 passwd),SGID 让目录下新建文件继承目录属组,粘滞位让 /tmp 谁都能写但只有属主能删。误区是看懂了数字却不知这些位在服务场景里一旦放开就是提权面。\n\n## 生产实践\n在 PRJ-01 智慧教育私有化部署里,我把 AI 服务的运行账号统一为低权限专用用户,镜像内不以 root 起进程,宿主机数据目录 chown 给专用账号、权限收紧到 750。这就是最小权限的成本:初期要梳理每个服务到底读什么写什么,换来的是越权面最小。权限约束的思路和 DEC-06 的 fail-closed 一条线——宁可先收紧再放,也不图省事 chmod 777。",
+    "memoryHook": "rwx三位配属主属组其他,最小权限是底线",
+    "tags": [
+      "技术"
+    ],
+    "anchors": [
+      "PRJ-01",
+      "DEC-06"
+    ],
+    "gap": false,
+    "gapNote": "",
+    "priority": "T0",
+    "related": [
+      "T4-004",
+      "T4-003"
+    ],
+    "srs": true
+  },
+  {
+    "id": "T4-002",
+    "chapter": "tech4",
+    "title": "看日志相关能力",
+    "questions": [
+      "Linux 系统日志都放在哪些位置、如何快速定位?",
+      "journalctl 和传统 syslog 文件有什么区别?",
+      "实时跟踪和过滤日志有哪些组合命令?",
+      "logrotate 为什么要做、轮转策略怎么定?"
+    ],
+    "answerMarkdown": "## 结论\n排查问题的第一现场就是日志:系统日志在 /var/log 下,systemd 服务日志用 journalctl 统一收集,应用日志由应用自己落到指定目录。核心能力是「实时跟踪 + 按关键字/时间过滤 + 上下文关联」。\n\n## 原理与边界\njournalctl 是 systemd 的日志入口,二进制存储、支持按服务/时间/优先级过滤,比翻分散的 syslog 文件更集中;但容器化和应用较多时,很多日志还是落磁盘文件,所以要 tail -f + grep 关键字 + awk 掐时间窗组合用。logrotate 解决「日志无限膨胀打满磁盘」,按大小或日期轮转、压缩、保留份数。误区是只盯 grep 关键字,忽略按时间窗把多份日志串起来还原链路——单条报错往往看不出因果。\n\n## 生产实践\n在 PRJ-01 里我做时延调优时,NUM-02 的 6 段拆解每一段都要有日志埋点,最后靠日志按时间窗把一次请求的完整链路拼出来,才能定位到底哪一段超了 2.83s 预算。排障的高频操作是「先 journalctl 看服务有没有崩、再 tail 应用日志看请求细节、用 awk 取时延字段排序」。这套「先系统后应用、按时间窗关联」的习惯,比记住任何单条命令都值钱。",
+    "memoryHook": "journalctl 集中看服务,tail+grep+awk 串时间窗",
+    "tags": [
+      "技术"
+    ],
+    "anchors": [
+      "PRJ-01",
+      "NUM-02"
+    ],
+    "gap": false,
+    "gapNote": "",
+    "priority": "T0",
+    "related": [
+      "T4-005"
+    ],
+    "srs": true
+  },
+  {
+    "id": "T4-003",
+    "chapter": "tech4",
+    "title": "常用文件",
+    "questions": [
+      "Linux 常用的系统配置文件有哪些、各自管什么?",
+      "/etc/hosts、resolv.conf、网卡配置如何影响网络解析?",
+      "passwd 和 shadow 有什么区别、shell 配置在哪里?",
+      "fstab 的作用是什么、改错了会怎样?"
+    ],
+    "answerMarkdown": "## 结论\n熟悉 Linux 常用文件就是熟悉系统的「可调节点」:/etc 下是服务与系统配置,/etc/hosts 做本地主机名解析,/etc/passwd 存账号、/etc/shadow 存加密口令,shell 配置在 /etc/profile 与用户家目录的 .bashrc,/etc/fstab 定义开机挂载,df/du 看磁盘使用。\n\n## 原理与边界\nhosts 优先级通常高于 DNS,私有化环境里常用它做内网主机名到 IP 的映射、替代 DNS;resolv.conf 是 DNS 服务器配置,网卡脚本则是 IP 与网关。passwd 是明文可见的用户列表,真正口令在 shadow 的哈希里、权限必须 600。fstab 一定要谨慎:少一行或挂载点写错可能导致开机起不来,改完先 mount -a 验证再重启。误区是分不清「配置生效到底要不要重启服务」。\n\n## 生产实践\n在 PRJ-01 私有化部署时,客户内网没有外网 DNS,我直接在 hosts 里写死向量库、模型网关的内网地址,让服务用稳定主机名互联,呼应 DEC-05 数据不出域、依赖内网交付。改 fstab 或网卡配置前,先 mount -a、先测连通再动重启,避免把远程交付环境搞到失联。关键不是背文件清单,而是「每个改动先可验证、可回退」。",
+    "memoryHook": "熟悉 /etc 可调节点,改动先验证再重启",
+    "tags": [
+      "技术"
+    ],
+    "anchors": [
+      "PRJ-01",
+      "DEC-05"
+    ],
+    "gap": false,
+    "gapNote": "",
+    "priority": "T1",
+    "related": [
+      "T4-001",
+      "T4-008"
+    ],
+    "srs": true
+  },
+  {
+    "id": "T4-004",
+    "chapter": "tech4",
+    "title": "安全设置相关问题",
+    "questions": [
+      "Linux 上线前要做哪些安全加固?",
+      "SSH 加固有哪些要点(禁用 root、改端口、密钥认证)?",
+      "iptables/firewalld/ufw 如何做端口最小化?",
+      "SELinux 和 AppArmor 到底要不要开?"
+    ],
+    "answerMarkdown": "## 结论\nLinux 安全加固是一条清单:SSH 禁用 root 密码登录、改用密钥认证,防火墙只放通业务必需端口,口令策略加复杂度与失败锁定,必要时用 SELinux/AppArmor 做强制访问控制。核心是「暴露面最小化」。\n\n## 原理与边界\nSSH 加固里「改端口」只能减少扫描噪音、不算真安全,真正有效的是禁密码登录、只允许密钥。防火墙是网络层门禁,iptables 是最底层的包过滤,firewalld/ufw 是更高层封装;最小化就是「业务不需要的端口一个不多开」。PAM 管认证策略,可做复杂度、历史口令、失败锁定。SELinux 是强制访问控制,比传统 DAC 更细,但代价是排障成本高,很多私有化交付为规避问题直接禁用——这是权衡,不是偷懒。\n\n## 生产实践\n在 PRJ-01 智慧教育这类政务私有化项目里,安全是验收红线而不是加分项:生产机 SSH 只开密钥、root 禁远程登录,防火墙只放 nginx 入口端口与内网服务互通端口。安全约束和 DEC-06 的 fail-closed 是同一哲学——审计、配额这类必须「不允许就拒绝」,出了问题再补救就晚了。端口最小化与网关入口收敛是一条线:入口收紧,绕过的口子才堵得住。",
+    "memoryHook": "暴露面最小化,SSH 只密钥、端口不多开",
+    "tags": [
+      "技术"
+    ],
+    "anchors": [
+      "PRJ-01",
+      "DEC-06"
+    ],
+    "gap": false,
+    "gapNote": "",
+    "priority": "T0",
+    "related": [
+      "T4-001"
+    ],
+    "srs": true
+  },
+  {
+    "id": "T4-005",
+    "chapter": "tech4",
+    "title": "常用命令及其使用场景",
+    "questions": [
+      "文件与目录管理常用哪些命令、各自适用场景?",
+      "find 和 grep 定位文件/内容时怎么配合?",
+      "ps/top/kill 如何定位和终止进程?",
+      "ss 和 netstat 有什么区别?"
+    ],
+    "answerMarkdown": "## 结论\nLinux 命令按场景分四组:文件目录(ls/cd/cp/mv/rm/find/ln)、文本处理(cat/grep/awk/sed/sort/uniq)、进程网络(ps/top/kill/ss/lsof)、磁盘系统(df/du/free/uptime)。熟练的标志是「能根据目标秒级选出命令并组合成管道」。\n\n## 原理与边界\nfind 按条件递归定位文件、常配 -exec 或 xargs 批量处理;grep 是行过滤、awk 是列处理,组合 grep 取关键字再 awk 取列是看日志的黄金搭档。ps 看进程快照、top 看动态资源、kill 发信号(15 优雅退出、9 强杀)。ss 是 netstat 的现代替代,性能更好、信息更全,lsof 看「谁占着端口/文件」。误区是死记命令不看场景,比如用 cat 打开超大日志、不记得 tail -f 实时跟踪。\n\n## 生产实践\n在 PRJ-01 排障时,我的固定套路是:ss -tlnp 看端口和监听进程 -> lsof 看谁占着端口 -> ps/top 定位高 CPU 进程 -> tail -f 配合 grep 过滤日志。做 NUM-02 的 6 段时延拆解时,用 awk 从访问日志抽出各段耗时字段、sort 排序取分位,是量化定位的直接手段。命令本身是死的,「按目标组合出管道」才是要答出的能力。",
+    "memoryHook": "按目标选命令、管道组合,ss/lsof 定位端口与进程",
+    "tags": [
+      "技术"
+    ],
+    "anchors": [
+      "PRJ-01",
+      "NUM-02"
+    ],
+    "gap": false,
+    "gapNote": "",
+    "priority": "T0",
+    "related": [
+      "T4-002",
+      "T4-006"
+    ],
+    "srs": true
+  },
+  {
+    "id": "T4-006",
+    "chapter": "tech4",
+    "title": "进程与端口管理",
+    "questions": [
+      "Linux 进程模型是怎样的、前台与后台如何管理?",
+      "如何定位占用端口的进程?",
+      "kill 的不同信号有什么区别?",
+      "僵尸进程是什么、怎么处理?"
+    ],
+    "answerMarkdown": "## 结论\n进程是运行中的程序实例,端口是网络层服务对外暴露的入口,两者通过 socket 绑定。管理的核心是「能定位(ps/top/ss)、能控制(kill/信号)、能排障(僵尸/端口占用)」。\n\n## 原理与边界\n进程有运行/睡眠/停止/僵尸等状态,SIGTERM 让进程有机会自己清理,SIGKILL 直接杀掉不留机会,所以「先 15 后 9」是惯例。端口占用用 ss -tlnp 或 lsof -i:port 反查进程。僵尸进程是子进程退出但父进程没回收(wait),本质是父进程 bug,杀掉父进程就由 init 收尾。误区是 top 里看到高 CPU 就 kill,先看是不是业务预期、再看是哪条线程,别上来强杀。\n\n## 生产实践\n在 PRJ-01 部署时最常撞的是「端口被占导致新实例起不来」,我用 lsof -i:8000 反查旧进程、优雅停掉再发布,而不是盲目 kill -9 把正在处理的请求砍断。容器化后进程模型更清晰:一个容器一个主进程,PID 1 退出容器就退出,所以我会关注优雅停机——发 SIGTERM 让服务 flush 完再退出,贴合链路里请求不能丢的要求。进程管理在私有化里就是发布稳定性的底座。",
+    "memoryHook": "ss/lsof 反查端口占用,先 15 后 9,容器 PID1 退出即退",
+    "tags": [
+      "技术"
+    ],
+    "anchors": [
+      "PRJ-01"
+    ],
+    "gap": false,
+    "gapNote": "",
+    "priority": "T0",
+    "related": [
+      "T4-005",
+      "T4-007",
+      "T4-009"
+    ],
+    "srs": true
+  },
+  {
+    "id": "T4-007",
+    "chapter": "tech4",
+    "title": "磁盘与内存监控",
+    "questions": [
+      "Linux 磁盘与内存监控用哪些命令?",
+      "df 和 du 有什么区别、对不上是什么原因?",
+      "free 里 used/free/buff/cache 如何理解?",
+      "磁盘或内存告警时怎么定位元凶?"
+    ],
+    "answerMarkdown": "## 结论\n磁盘监控看 df(挂载点整体)与 du(目录颗粒),内存看 free 和 top。核心不是记住指标,而是「容量告警 -> 定位哪个目录/进程 -> 决定清理还是扩容」的闭环。\n\n## 原理与边界\ndf 看文件系统级别的占用,du 递归统计目录实际消耗,两者对不上常因为「文件被进程持有但已删除」——df 显示占用高、du 又找不到大文件,这时 lsof 找被删文件句柄、重启该进程即可释放。free 的 buff/cache 是可回收的缓存,判断内存是否真紧张应看 available 而非 free。误区:一看到 free 数值很小就以为要加内存,其实大量是 cache。\n\n## 生产实践\n在 PRJ-01 私有化环境里,向量库和日志是磁盘大户,我做的不是等告警,而是提前算容量:索引数据量、日志轮转保留份数、模型文件大小,定出磁盘水位线。日志用 logrotate 压低保留份数,向量库数据目录单独盘。这套思路和 NUM-02 的 6 段时延拆解一个道理——先拆清「谁在消耗」,再决定压谁,而不是拍脑袋扩容。监控的意义在于「有基线才知道异常」。",
+    "memoryHook": "df 看整体 du 看目录,free 看 available,告警先定位再动作",
+    "tags": [
+      "技术"
+    ],
+    "anchors": [
+      "PRJ-01",
+      "NUM-02"
+    ],
+    "gap": false,
+    "gapNote": "",
+    "priority": "T1",
+    "related": [
+      "T4-006"
+    ],
+    "srs": true
+  },
+  {
+    "id": "T4-008",
+    "chapter": "tech4",
+    "title": "网络排查命令",
+    "questions": [
+      "网络排查的经典命令有哪些?",
+      "ping、traceroute 如何定位连通性问题?",
+      "curl 如何做 HTTP 层面的诊断?",
+      "如何判断是网络问题还是应用问题?"
+    ],
+    "answerMarkdown": "## 结论\n网络排查从连通到应用分层走:ping、traceroute 看网络层通不通 -> 端口可用(telnet/nc/ss)看服务通不通 -> HTTP 语义(curl -v 看状态码与耗时)看应用对不对。核心是「逐层排除、不跳层瞎猜」。\n\n## 原理与边界\nping 走 ICMP,只能证明网络层通,不代表端口和 HTTP 服务通;traceroute 看数据包经过的每一跳、定位拥塞点;curl -v 能看 DNS 解析、TCP 建连、TLS 握手、首字节各阶段,配合 -w 输出各分项耗时,精准定位慢在哪一阶段。误区:ping 不通就判定服务器挂了(可能只是防火墙禁 ICMP),反过来 ping 通也不代表服务 OK。\n\n## 生产实践\n在 PRJ-01 做网关和模型服务联调时,我把 curl -w 各段耗时当成时延拆解的延伸工具:一次调用慢,先用 curl 分项看是 DNS、建连还是握手耗时,和 NUM-02 的 6 段拆解对齐到「网络链路这一段」,避免把网络抖动误判成模型慢。私有化内网还常遇到 DNS 不解析,用 hosts 兜底。网络问题先分清楚「在哪一层坏」,再对症下药。",
+    "memoryHook": "连通到端口到 HTTP 逐层查,curl -w 分项看慢在哪段",
+    "tags": [
+      "技术"
+    ],
+    "anchors": [
+      "PRJ-01",
+      "NUM-02"
+    ],
+    "gap": false,
+    "gapNote": "",
+    "priority": "T1",
+    "related": [
+      "T4-003"
+    ],
+    "srs": true
+  },
+  {
+    "id": "T4-009",
+    "chapter": "tech4",
+    "title": "定时任务与开机自启",
+    "questions": [
+      "cron 定时任务如何配置、格式是什么?",
+      "systemd 如何管理服务开机自启?",
+      "cron 和 systemd timer 有什么区别、怎么选?",
+      "定时任务执行失败的排查思路是什么?"
+    ],
+    "answerMarkdown": "## 结论\n定时任务用 cron(分 时 日 月 周 命令),开机自启用 systemd(Unit 文件配 WantedBy=multi-user.target + systemctl enable)。现代 Linux 上服务常驻更推荐 systemd,定时跑批可用 cron 或 systemd timer。\n\n## 原理与边界\ncrontab 的五个时间字段易错(月从 1 开始、周 0/7 都是周日),而 cron 的环境 PATH 极简,脚本里不写全路径常导致「手动能跑、cron 里跑不起来」。systemd timer 比 cron 更可控(支持单调时钟、开机补跑),缺点是配置更繁琐。开机自启的根基是 systemd 的依赖与顺序关系(After/Requires),配错会导致服务在依赖没就绪时启动。误区:把一次性脚本塞进 cron 却不管失败通知,失败了没人知道。\n\n## 生产实践\n在 PRJ-01 私有化里,我把所有 AI 服务用 systemd 管起来并 enable,机房重启或迁移后能自动拉起,不靠人工一个个起。周期性日志清理、数据同步用 cron,但脚本里写死全路径、失败发告警,绝不静默失败。这个「自启兜底 + 失败可见」的习惯,配合 NUM-02 的时延管控,保证环境可自愈、问题可发现。",
+    "memoryHook": "cron 五段格式易错,常驻服务交给 systemd enable 自启",
+    "tags": [
+      "技术"
+    ],
+    "anchors": [
+      "PRJ-01",
+      "NUM-02"
+    ],
+    "gap": false,
+    "gapNote": "",
+    "priority": "T1",
+    "related": [
+      "T4-006"
+    ],
+    "srs": true
+  },
+  {
+    "id": "T4-010",
+    "chapter": "tech4",
+    "title": "核心概念与原理",
+    "questions": [
+      "Docker 镜像、容器、仓库三者的关系是什么?",
+      "容器和虚拟机的本质区别?",
+      "UnionFS 分层机制是如何工作的?",
+      "容器为什么启动快、资源占用小?"
+    ],
+    "answerMarkdown": "## 结论\nDocker 用镜像(分层只读模板)+ 容器(镜像的运行实例)+ 仓库(镜像分发)三位一体构建交付链。与虚拟机不同,容器与宿主机共享内核,靠 namespace 隔离、cgroup 限额,所以轻量、启动秒级。\n\n## 原理与边界\n镜像分层基于 UnionFS,每层只存增量、底层只读、顶层可写(写时复制),带来「构建复用、启动共享」的收益,也带来「删除文件不减镜像体积」的坑。容器靠 namespace 隔离进程/网络/挂载视图,cgroup 限制 CPU/内存。误区是把容器当轻量虚拟机——它共享内核意味着逃逸面和隔离强度都和虚拟机不是一个等级,生产上安全兜底要另做。\n\n## 生产实践\n在 PRJ-01 做智慧教育 AI 能力的私有化交付时,我用镜像打包「代码+依赖+运行环境」,把交付物从「一份部署清单+一堆命令」变成「一条 docker run/Compose up」。Dify 和自研 FastAPI 服务都容器化,好处是客户离线内网也能原样拉起、规避环境差异。这正对应 DEC-05 里「数据不出域、防环境锁死」的约束——容器配内网镜像仓库,比部署脚本可复现得多。",
+    "memoryHook": "镜像分层只读、容器共享内核,namespace 隔离 cgroup 限额",
+    "tags": [
+      "技术"
+    ],
+    "anchors": [
+      "PRJ-01",
+      "DEC-05"
+    ],
+    "gap": false,
+    "gapNote": "",
+    "priority": "T0",
+    "related": [
+      "T4-011",
+      "T4-012",
+      "T4-013",
+      "T4-019"
+    ],
+    "srs": true
+  },
+  {
+    "id": "T4-011",
+    "chapter": "tech4",
+    "title": "Dockerfile与Compose编排",
+    "questions": [
+      "Dockerfile 常用指令有哪些、各自作用?",
+      "如何写出体积小、能复用层的 Dockerfile?",
+      "docker compose 的用途与核心字段是什么?",
+      "Dockerfile 中 CMD 和 ENTRYPOINT 有什么区别?"
+    ],
+    "answerMarkdown": "## 结论\nDockerfile 用 FROM/RUN/COPY/CMD/ENTRYPOINT 等指令描述镜像构建,Compose 用一个 YAML 编排多容器(服务、网络、卷)。Dockerfile 管「单个镜像怎么来」,Compose 管「整套系统怎么起」。\n\n## 原理与边界\n镜像层数影响体积与复用:把变化少的(依赖安装)放前面、变化多的(代码)放后面,依赖层就能被缓存复用;用多阶段构建把构建期和运行期分离,运行时只留产物,体积能砍一大截。CMD 是默认启动命令、可被 docker run 覆盖,ENTRYPOINT 是固定入口、参数追加。误区是单阶段把源码、编译链全塞进镜像,上线镜像巨大。\n\n## 生产实践\n在 PRJ-01 里,AI 服务用多阶段构建:第一阶段装依赖、构建,第二阶段只 COPY 运行产物,再配 .dockerignore 排除无用文件,把镜像体积显著压下来。整套系统(网关、FastAPI 服务、向量库、Dify)用一个 compose.yaml 编排,声明服务依赖和端口,交付时一条 docker compose up -d 就能拉起。这显著缩短了私有化交付的可复现时间。",
+    "memoryHook": "依赖前置缓存层、多阶段瘦身,Compose 声明整套编排",
+    "tags": [
+      "技术"
+    ],
+    "anchors": [
+      "PRJ-01",
+      "DEC-05"
+    ],
+    "gap": false,
+    "gapNote": "",
+    "priority": "T0",
+    "related": [
+      "T4-010",
+      "T4-014",
+      "T4-015",
+      "T4-017",
+      "T4-020"
+    ],
+    "srs": true
+  },
+  {
+    "id": "T4-012",
+    "chapter": "tech4",
+    "title": "数据持久化与网络",
+    "questions": [
+      "Docker 容器的数据如何持久化?",
+      "volume 和 bind mount 有什么区别、怎么选?",
+      "容器网络有哪几种默认模式?",
+      "容器之间如何互相访问?"
+    ],
+    "answerMarkdown": "## 结论\n容器可销毁,数据持久化要用 volume(卷)或 bind mount(绑定挂载)挂到容器外;网络默认有 bridge/host/none 等模式,容器间通信靠自定义网络 + 服务名/别名解析。\n\n## 原理与边界\nvolume 由 Docker 管理、不依赖宿主机路径、可迁移备份,是生产首选;bind mount 直接挂宿主机具体目录、便于调试但移植性差。默认 bridge 网络下,同网络容器能通过服务名或别名互通(Compose 里就是 service 名当 DNS),跨主机才需要额外方案。误区:把数据写进容器可写层,容器一删数据全没;或用默认 bridge 手动指定 IP,而不是用服务名解析。\n\n## 生产实践\n在 PRJ-01 里,向量库、数据库、日志这些有状态数据,我一律挂 volume(bind mount 指定到宿主机数据盘),保证容器升级、重建不丢数据和索引。服务之间全用 Compose 网络里的服务名互访,不写死 IP。这条和 DEC-05 的「数据不出域」呼应:持久化数据目录就是数据落域的物理边界,卷的目录规划顺带把权限和备份范围也圈清楚了。",
+    "memoryHook": "数据落 volume 不落可写层,服务间用服务名不用 IP",
+    "tags": [
+      "技术"
+    ],
+    "anchors": [
+      "PRJ-01",
+      "DEC-05"
+    ],
+    "gap": false,
+    "gapNote": "",
+    "priority": "T0",
+    "related": [
+      "T4-010",
+      "T4-016",
+      "T4-018"
+    ],
+    "srs": true
+  },
+  {
+    "id": "T4-013",
+    "chapter": "tech4",
+    "title": "安全与资源隔离",
+    "questions": [
+      "Docker 有哪些安全风险、如何加固?",
+      "如何限制容器的 CPU/内存资源?",
+      "为什么容器内不要用 root 运行?",
+      "镜像供应链安全如何保障?"
+    ],
+    "answerMarkdown": "## 结论\nDocker 安全围绕「进程非 root、资源限额、镜像可信、能力裁剪」四条:容器内以非 root 运行,cgroup 限制 CPU/内存,镜像来源私有仓库并扫描,尽可能去掉多余 capability、避免 privileged。\n\n## 原理与边界\n容器共享内核,root 容器一旦被逃逸影响面很大,所以用 USER 指令落非 root 是基础;--memory/--cpus 是资源隔离闸门,防止单容器拖垮整机;--privileged 和挂载宿主机敏感目录是重大攻击面,能不用就不用。镜像供应链上,latest 标签不可复现,应锁 digest 或用私有仓库固定版本。误区:以为「进了容器就安全了」,其实容器是打包机制不是天然安全边界,隔离强度弱于虚拟机。\n\n## 生产实践\n在 PRJ-01 智慧教育这类政务项目里,安全是验收项:镜像统一从内网私有仓库拉、运行账号落非 root、compose 里写死资源限额,避免某个推理服务内存泄漏把整机震挂。这和 DEC-06 的分级思路一致——审计、配额这类必须 fail-closed,安全约束前提到「不允许就拒绝」。容器化的另一重收益,是把安全基线写进 Dockerfile 和 compose,人人可审、可复现。",
+    "memoryHook": "非 root + 资源限额 + 可信镜像 + 裁剪能力",
+    "tags": [
+      "技术"
+    ],
+    "anchors": [
+      "PRJ-01",
+      "DEC-06"
+    ],
+    "gap": false,
+    "gapNote": "",
+    "priority": "T0",
+    "related": [
+      "T4-010"
+    ],
+    "srs": true
+  },
+  {
+    "id": "T4-014",
+    "chapter": "tech4",
+    "title": "企业级部署与迁移",
+    "questions": [
+      "企业如何把应用容器化后迁移到新环境?",
+      "镜像如何离线导入导出?",
+      "私有化/离线交付的容器方案怎么设计?",
+      "容器化迁移有哪些常见坑?"
+    ],
+    "answerMarkdown": "## 结论\n企业级容器部署的核心是「可复现 + 可迁移」:镜像进私有仓库统一版本,配置走环境变量/挂载实现「一份镜像多环境」,迁移靠 save/load 离线搬镜像、volume 搬数据。这解决了「在我机器上能跑」的老问题。\n\n## 原理与边界\n镜像和配置要分层:镜像只放代码与运行时,连接串、密钥、环境差异走 env/config,这样生产、内网、测试用同一镜像不同配置。离线迁移用 docker save 打包、docker load 导入,私有仓库用 registry 或 Harbor 内网分发。坑在于:latest 标签不可控、数据忘搬、镜像里写死了环境。误区是镜像里烤死 IP/密钥,换个环境就重打。\n\n## 生产实践\n在 PRJ-01 智慧教育私有化交付里,客户内网与外网隔离,我把镜像统一打 tag 存内网仓库,一次构建多环境复用,配置用 env 注入。DEC-05 要求「数据不出域、防环境锁死」,容器化正是落点:镜像在客户环境里原样编排,不依赖具体宿主机的库版本。这让交付从「现场调环境」变成「拉镜像即起」,迁移和扩节点的成本也低。",
+    "memoryHook": "镜像与配置分层、离线 save/load,一份镜像多环境",
+    "tags": [
+      "技术"
+    ],
+    "anchors": [
+      "PRJ-01",
+      "DEC-05"
+    ],
+    "gap": false,
+    "gapNote": "",
+    "priority": "T0",
+    "related": [
+      "T4-011"
+    ],
+    "srs": true
+  },
+  {
+    "id": "T4-015",
+    "chapter": "tech4",
+    "title": "Dify在Docker中的部署结构与排障思路",
+    "questions": [
+      "Dify 用 Docker 部署的典型结构是什么?",
+      "Dify 有哪些服务组件、各自职责?",
+      "Dify 容器化部署的常见问题怎么排?",
+      "Dify 私有化部署如何保证数据不出域?"
+    ],
+    "answerMarkdown": "## 结论\nDify 的 Docker 部署是一套多服务组合:api(主服务)、worker(异步任务)、web(前端)、postgres(元数据)、redis(缓存/队列)、可选的向量库。用 Compose 编排,排障顺序是「容器状态 -> 日志 -> 服务间连通 -> 数据卷」。\n\n## 原理与边界\napi 和 worker 共享同一份代码、不同启动角色,靠 redis 队列解耦异步任务,元数据在 postgres、向量在向量库。排障时先 docker compose ps 看是不是有服务没起来或反复重启,再看容器 logs,常见是数据库连不上、向量库连不上、端口冲突、卷权限。误区是看到 web 白屏就重装,其实多半是 api 依赖没就绪或入口配置错。\n\n## 生产实践\n在 PRJ-01 里 Dify 是分层选型的一环(DEC-04:确定性状态机主干 + Dify 做快速搭建),我做私有化部署时把 Dify 的向量库和数据卷全部指向内网存储、数据不落公网,呼应 DEC-05 数据不出域。排障时固定「compose ps -> logs -> 连通性 -> 卷」的顺序,重点盯 api 对 postgres/redis 的就绪,避免「起来就 500」这类部署型事故。这套排障顺序比死记配置管用。",
+    "memoryHook": "api+worker+web+pg+redis 多服务,ps 到 logs 到连通到卷",
+    "tags": [
+      "技术"
+    ],
+    "anchors": [
+      "PRJ-01",
+      "DEC-04",
+      "DEC-05"
+    ],
+    "gap": false,
+    "gapNote": "",
+    "priority": "T0",
+    "related": [
+      "T4-011"
+    ],
+    "srs": true
+  },
+  {
+    "id": "T4-016",
+    "chapter": "tech4",
+    "title": "升级备份与危险操作",
+    "questions": [
+      "Docker 升级服务有哪些注意点?",
+      "数据如何备份与恢复?",
+      "哪些 docker 命令是危险的、如何规避?",
+      "升级失败如何快速回滚?"
+    ],
+    "answerMarkdown": "## 结论\n容器升级靠「镜像版本化 + 数据卷分离」,备份靠卷快照或数据导出,危险操作(如 docker rm -f、system prune、误删 volume)靠「数据在卷里、命令前先确认」规避。核心是让升级可回滚、删除不丢数据。\n\n## 原理与边界\n升级的本质是「换镜像、留数据」:先 docker pull 新 tag,再 compose up 起新容器,数据因挂卷不受影响;回滚就是切回旧 tag。备份优先导出 postgres/向量库数据,而不是备份容器本身。危险区:docker system prune -a 会清掉所有未使用镜像、加 --volumes 会连卷一起删,生产要慎用;rm 容器不加 -v 不删卷、加 -v 就删卷,这是数据丢失重灾区。\n\n## 生产实践\n在 PRJ-01 私有化环境里,我把升级固化成三步:备份卷(尤其向量索引和元数据)-> 打新镜像 tag -> compose 起新实例,验证失败就切回旧 tag 秒回滚。prune 这类清理命令在生产机上我默认不用 --volumes,关键卷单独路径、独立备份脚本。这个「数据在卷、升级只换镜像」的原则,是私有化交付里「改得起、回得去」的底气。",
+    "memoryHook": "升级换镜像留数据卷,prune 慎加 --volumes,回滚切旧 tag",
+    "tags": [
+      "技术"
+    ],
+    "anchors": [
+      "PRJ-01"
+    ],
+    "gap": false,
+    "gapNote": "",
+    "priority": "T0",
+    "related": [
+      "T4-012"
+    ],
+    "srs": true
+  },
+  {
+    "id": "T4-017",
+    "chapter": "tech4",
+    "title": "镜像构建与体积优化",
+    "questions": [
+      "如何减小 Docker 镜像体积?",
+      "多阶段构建如何落地?",
+      "基础镜像如何选择(alpine/debian-slim)?",
+      ".dockerignore 和层缓存如何利用?"
+    ],
+    "answerMarkdown": "## 结论\n镜像瘦身三板斧:选小基础镜像(如 python:slim/alpine)、多阶段构建只留产物、利用 .dockerignore 与层缓存减少无效层。目标是「构建快、拉取快、攻击面小」。\n\n## 原理与边界\nalpine 基于 musl libc、体积极小,但某些 C 扩展要重编译;debian-slim 兼容性更好、体积可控,选哪个看依赖。多阶段构建把构建依赖(编译器、wheel)关在 builder 阶段,运行时只 COPY 最终产物。层缓存要求「变化少的指令靠前」,每层尽量合并 RUN 减少层数、清理包缓存。误区:只盯体积,为了 alpine 把一堆依赖搞到编译不过,得不偿失。\n\n## 生产实践\n在 PRJ-01 里我给 FastAPI 服务和 Dify 都用多阶段构建 + slim 基础镜像:依赖装进 builder、最终镜像只留运行时,配合 .dockerignore 把 .git、测试、日志排除。这样私有化离线环境里 save/load 搬镜像快、内网仓库存储压力小,也顺带减小镜像扫描的告警面。瘦身不是炫技,是私有化交付吞吐与成本的真实约束逼出来的。",
+    "memoryHook": "小基础镜像+多阶段+ignore+层缓存,四招瘦身",
+    "tags": [
+      "技术"
+    ],
+    "anchors": [
+      "PRJ-01"
+    ],
+    "gap": false,
+    "gapNote": "",
+    "priority": "T1",
+    "related": [
+      "T4-011"
+    ],
+    "srs": true
+  },
+  {
+    "id": "T4-018",
+    "chapter": "tech4",
+    "title": "容器网络模式详解",
+    "questions": [
+      "Docker 有哪几种网络模式?",
+      "bridge 模式的数据流向是怎样的?",
+      "host 模式和 bridge 模式怎么选?",
+      "容器如何映射端口、NAT 是怎么工作的?"
+    ],
+    "answerMarkdown": "## 结论\nDocker 网络模式有 bridge(默认)、host、none、container、overlay 等。默认 bridge 是 NAT:容器有独立子网,对外靠端口映射,宿主机转发。host 模式容器直接共用宿主网络栈,最快但隔离弱、易端口冲突。\n\n## 原理与边界\nbridge 模式下每个容器拿到虚拟网卡和独立 IP,docker0 网桥把容器连起来,容器通过 iptables/DNAT 出网与外访。自定义 bridge 网络比默认的更友好,自带 DNS 服务名解析。host 模式零 NAT 损耗、适合性能敏感场景,但端口直接暴露在宿主、多容器易冲突。误区:默认 bridge 网络不会自动做服务名解析,跨容器通信要自己配,很多人在这里踩坑。\n\n## 生产实践\n在 PRJ-01 里,服务间通信我用自定义 bridge 网络 + 服务名解析,只有需要直连宿主设备或性能极端敏感时才评估 host 模式。桥接 NAT 有一点点转发损耗,但换来端口隔离和清晰拓扑,在我这里反而更重要。网络模式没有银弹,选型依据是「隔离性 vs 性能 vs 复杂度」三者权衡。",
+    "memoryHook": "默认 bridge 是 NAT,自定义网络有 DNS,host 最快但冲突",
+    "tags": [
+      "技术"
+    ],
+    "anchors": [
+      "PRJ-01"
+    ],
+    "gap": false,
+    "gapNote": "",
+    "priority": "T1",
+    "related": [
+      "T4-012"
+    ],
+    "srs": true
+  },
+  {
+    "id": "T4-019",
+    "chapter": "tech4",
+    "title": "日志与监控",
+    "questions": [
+      "Docker 日志如何收集与查看?",
+      "docker logs 有哪些限制?",
+      "容器监控的核心指标有哪些?",
+      "日志驱动怎么选、如何避免打满磁盘?"
+    ],
+    "answerMarkdown": "## 结论\n容器日志靠 docker logs 看 stdout/stderr,但容器销毁即失、多容器分散,生产要配日志驱动(json-file 带轮转、syslog 或集中采集)+ 监控采集 CPU/内存/网络/磁盘指标,统一到平台。\n\n## 原理与边界\n默认 json-file 日志驱动把日志写进宿主机一个 JSON 文件,不配轮转会无限膨胀打满磁盘,所以要配 max-size/max-file 或换驱动。docker logs 只适合临时排查,不适合长期留存。监控上要盯容器级 CPU/内存/重启次数/OOM kill,而不是只看宿主整机。误区:只看应用日志不看容器资源,或反之;两者要一起看才能定位「慢/崩」是资源还是代码。\n\n## 生产实践\n在 PRJ-01 里我给所有容器统一配 json-file 日志驱动 + 轮转上限,避免日志把数据盘塞满——直接对应磁盘监控那条里的基线思维。做 NUM-02 的 6 段时延拆解时,应用日志里埋的段耗时 + 容器 CPU/内存指标一起看,才能判断某段慢是模型慢还是被打满资源挤的。日志与监控是排障的两条腿,缺一条就靠猜。",
+    "memoryHook": "json-file 记日志必配轮转,资源指标和应用日志一起看",
+    "tags": [
+      "技术"
+    ],
+    "anchors": [
+      "PRJ-01",
+      "NUM-02"
+    ],
+    "gap": false,
+    "gapNote": "",
+    "priority": "T1",
+    "related": [
+      "T4-010"
+    ],
+    "srs": true
+  },
+  {
+    "id": "T4-020",
+    "chapter": "tech4",
+    "title": "容器编排进阶",
+    "questions": [
+      "Docker Compose 和 Kubernetes 有什么区别、怎么选?",
+      "什么时候该上 Kubernetes?",
+      "编排解决的核心问题有哪些(服务发现、伸缩、滚动更新)?",
+      "小规模私有化部署还需要 Kubernetes 吗?"
+    ],
+    "answerMarkdown": "## 结论\nCompose 管单机多容器,Kubernetes 管集群级编排(调度、伸缩、自愈、滚动更新、服务发现)。选型原则是「规模决定工具」:单机或少量节点用 Compose 足够,多节点、大规模、需弹性才上 K8s。\n\n## 原理与边界\n编排的核心诉求是「声明式期望状态 + 持续收敛」:K8s 用副本和部署策略做滚动更新与自愈,代价是组件多、运维复杂度陡增、心智负担重。滚动更新本质是逐步替换实例、健康检查后再切流量,保证不停机。误区是「一上来就 K8s」把小规模私有化项目复杂化;也有反例——Compose 硬扛多节点导致状态难管。\n\n## 生产实践\n在 PRJ-01 智慧教育私有化交付里,客户环境通常是有限几台服务器,我选 Compose + systemd 管理,不上 K8s——因为交付对象要的是「运维简单、故障好排」,而不是集群调度能力。这和 DEC-04 的决策一致:选型跟着真实约束走,不引入用不上的重框架。若未来是多租户大规模弹性场景,再评估 K8s,但当前规模下 Compose 的声明式编排已经够稳。",
+    "memoryHook": "单机 Compose、集群 K8s,规模决定工具不硬上",
+    "tags": [
+      "技术"
+    ],
+    "anchors": [
+      "PRJ-01",
+      "DEC-04"
+    ],
+    "gap": false,
+    "gapNote": "",
+    "priority": "T1",
+    "related": [
+      "T4-011"
+    ],
+    "srs": true
+  },
+  {
+    "id": "T4-021",
+    "chapter": "tech4",
+    "title": "核心概念与进程模型（master/worker）",
+    "questions": [
+      "nginx 的 master/worker 进程模型是什么?",
+      "为什么 nginx 的并发性能高?",
+      "worker 进程数量怎么配置?",
+      "nginx 如何实现平滑重启?"
+    ],
+    "answerMarkdown": "## 结论\nnginx 采用 master + 多 worker 的多进程模型:master 负责读配置、管理 worker,worker 才真正处理请求。每个 worker 是单线程、异步非阻塞、事件驱动,一个 worker 扛大量并发连接,这正是它高性能的根源。\n\n## 原理与边界\nmaster 不处理请求,只负责配置加载、热更新信号、监控 worker;worker 数量一般设为 CPU 核数,各 worker 独立、不共享内存,靠内核把连接分发。平滑重启的原理是 master 先启动新 worker、优雅地让旧 worker 处理完存量请求再退出,实现零停机 reload。误区:以为 worker 越多越好,超核数只会增加上下文切换;或自己再 fork 多线程。\n\n## 生产实践\n在 PRJ-01 里我把 nginx 当网关入口,worker 数对齐机器核数,靠它扛页面和 API 的并发接入。平滑 reload 是我发布配置的常规动作——改完先 nginx -t 校验语法,再 reload 不停服生效,让网关变更几乎不影响在线请求。理解这个进程模型,才能理解网关为什么不是并发瓶颈,把 NUM-02 的 6 段拆解里网关这一段算清。",
+    "memoryHook": "master 管 worker、worker 单线程事件驱动,量对齐核数",
+    "tags": [
+      "技术"
+    ],
+    "anchors": [
+      "PRJ-01",
+      "NUM-02"
+    ],
+    "gap": false,
+    "gapNote": "",
+    "priority": "T0",
+    "related": [
+      "T4-022",
+      "T4-025"
+    ],
+    "srs": true
+  },
+  {
+    "id": "T4-022",
+    "chapter": "tech4",
+    "title": "反向代理与负载均衡",
+    "questions": [
+      "正向代理和反向代理有什么区别?",
+      "nginx 反向代理如何配置?",
+      "负载均衡有哪些策略?",
+      "反向代理下如何正确传递客户端真实 IP?"
+    ],
+    "answerMarkdown": "## 结论\n反向代理是 nginx 代替客户端向后端服务发请求、再把响应转回,对客户端屏蔽后端拓扑;负载均衡用 upstream 定义一组后端,按轮询/权重/ip_hash/least_conn/一致性哈希等策略分发流量。\n\n## 原理与边界\n正向代理代理的是客户端(帮客户出网),反向代理代理的是服务端(帮服务收流)。proxy_pass 是核心指令;负载均衡策略里默认轮询、weight 按权重、ip_hash 保会话但受来源 IP 变化影响、一致性哈希适合缓存类后端。反向代理默认会改源地址,后端看到的都是 nginx 的 IP,要用 X-Forwarded-For 等头透传真实客户端 IP,否则后端拿不到真实来源。误区:透传头没配导致审计和限流拿错 IP。\n\n## 生产实践\n在 PRJ-01 里 nginx 承担「入口收敛」角色:对外只暴露网关端口,内部服务不直接对客户端开放,流量经 upstream 分发到 FastAPI 服务。我显式透传 X-Forwarded-For,让后端的权限校验、审计和配额能识别真实来源——这直接支撑「网关绕过 0 处」的验收口径:入口收敛 + 真实 IP 透传,才是闭环的网关安全。",
+    "memoryHook": "反向代理屏蔽后端,upstream 策略分发,透传真实 IP",
+    "tags": [
+      "技术"
+    ],
+    "anchors": [
+      "PRJ-01",
+      "NUM-01"
+    ],
+    "gap": false,
+    "gapNote": "",
+    "priority": "T0",
+    "related": [
+      "T4-021",
+      "T4-023",
+      "T4-024",
+      "T4-026"
+    ],
+    "srs": true
+  },
+  {
+    "id": "T4-023",
+    "chapter": "tech4",
+    "title": "静态资源服务与缓存",
+    "questions": [
+      "nginx 如何高效服务静态资源?",
+      "静态资源缓存如何配置(expires/Cache-Control)?",
+      "try_files 的作用是什么?",
+      "如何用 nginx 做内容压缩(gzip)?"
+    ],
+    "answerMarkdown": "## 结论\nnginx 服务静态资源极强:直接读文件返回,配合 expires/Cache-Control 做浏览器强缓存、gzip 压缩降带宽、try_files 做优雅回退。核心是「静态的东西交给 nginx,别让应用服务去扛」。\n\n## 原理与边界\n静态文件缓存用 expires 设过期时间,生成 Cache-Control/Expires 头让浏览器命中强缓存;资源更新靠内容 hash 改名来刷新缓存。gzip 对文本类(js/css/html/json)压缩收益大,对已压缩格式(图片/视频)收益小、反而费 CPU。try_files 用文件存在性做 SPA 路由回退。误区:缓存策略一刀切,API 响应和静态资源混用一套过期时间,导致数据陈旧。\n\n## 生产实践\n在 PRJ-01 里,前端静态资源和可视化页面我放 nginx 直接服务 + 长缓存 + 内容 hash,把前后端流量分开,静态压不到后端;API 这种动态接口绝不能无脑缓存。关键判断是「哪些响应可缓存、哪些必须实时」。把静态剥离到网关,也是 NUM-02 的 6 段拆解里「静态走缓存、动态走链路」的省钱之道。",
+    "memoryHook": "静态交 nginx + expires + gzip,API 不无脑缓存",
+    "tags": [
+      "技术"
+    ],
+    "anchors": [
+      "PRJ-01",
+      "NUM-02"
+    ],
+    "gap": false,
+    "gapNote": "",
+    "priority": "T1",
+    "related": [
+      "T4-022"
+    ],
+    "srs": true
+  },
+  {
+    "id": "T4-024",
+    "chapter": "tech4",
+    "title": "常用配置与指令",
+    "questions": [
+      "server 和 location 的匹配规则是什么?",
+      "proxy_pass 与 proxy_set_header 如何用?",
+      "upstream 负载均衡如何配置?",
+      "rewrite 和 try_files 有什么区别?"
+    ],
+    "answerMarkdown": "## 结论\nnginx 常用配置围绕 server(虚拟主机)、location(路由匹配)、upstream(后端组)展开,配合 proxy_pass(反向代理)、rewrite(重写)、try_files(回退)、gzip、日志与 include 组织。核心是「路由匹配 + 转发 + 配置组织」三件事。\n\n## 原理与边界\nlocation 匹配有优先级:精确 = 最高、前缀 ^~ 次之、正则 ~* 按顺序、普通前缀最长匹配,记错会路由乱套。proxy_pass 结尾带不带斜杠直接影响 URI 拼接,是高频坑。rewrite 是 URL 重写(常配跳转),try_files 是文件存在性回退、不重写语义。include 把大配置拆成站点级/公共级文件。误区:不先 nginx -t 校验就直接 reload,语法错导致服务起不来。\n\n## 生产实践\n在 PRJ-01 里我把 nginx 配置拆成公共基础配置 + 各站点 include 分文件,变更只动对应文件,减少误触;每次改动先 nginx -t 校验再 reload,这是铁律。location 匹配上偏向用前缀/精确匹配、语义清晰的写法,少用难调试的嵌套正则。网关是所有流量的入口,配置的正确性和可维护性,就是整个平台稳定性的前置条件。",
+    "memoryHook": "location 优先级记清,proxy_pass 斜杠是坑,改动先 -t",
+    "tags": [
+      "技术"
+    ],
+    "anchors": [
+      "PRJ-01"
+    ],
+    "gap": false,
+    "gapNote": "",
+    "priority": "T0",
+    "related": [
+      "T4-022"
+    ],
+    "srs": true
+  },
+  {
+    "id": "T4-025",
+    "chapter": "tech4",
+    "title": "高可用与性能调优",
+    "questions": [
+      "nginx 如何实现高可用?",
+      "nginx 性能调优有哪些关键参数?",
+      "keepalive 与连接池如何优化?",
+      "如何用 keepalived 做 nginx 高可用?"
+    ],
+    "answerMarkdown": "## 结论\nnginx 高可用靠「多实例 + VIP 漂移」(keepalived)保证单机故障不中断;性能调优围绕 worker 数、连接数、keepalive、缓冲、gzip 等参数,压测驱动调参,而非拍脑袋。\n\n## 原理与边界\n单台 nginx 是单点,高可用至少两台 + keepalived 做虚拟 IP 漂移,主机故障备机接管。性能相关:worker_processes 对齐核数、worker_connections 与系统 open files 上限匹配、keepalive 复用连接减少握手、合理的 buffer 大小避免频繁读写磁盘、生产开 gzip 降带宽。误区:参数全拉满反而资源耗尽,或从不压测、凭感觉调参。\n\n## 生产实践\n在 PRJ-01 里 nginx 是流量咽喉,我把 P95 时延预算当成网关层的量化目标(NUM-02 的 P95 预算 ≤ 3s、实际 2.83s),压测确认网关不是瓶颈、各段耗时在预算内。高可用上按政务项目验收要求做双实例 + VIP,避免网关单点。我的原则是先建立基线、再压测找拐点、最后精调参数,而不是堆「看着牛」的数字。",
+    "memoryHook": "单点需 VIP 漂移,参数对齐核数与连接数、压测驱动",
+    "tags": [
+      "技术"
+    ],
+    "anchors": [
+      "PRJ-01",
+      "NUM-02"
+    ],
+    "gap": false,
+    "gapNote": "",
+    "priority": "T0",
+    "related": [
+      "T4-021"
+    ],
+    "srs": true
+  },
+  {
+    "id": "T4-026",
+    "chapter": "tech4",
+    "title": "常见问题排查",
+    "questions": [
+      "502/504 网关错误如何定位?",
+      "404 与 location 匹配问题怎么排查?",
+      "端口占用、worker 连接数限制如何排查?",
+      "nginx 日志如何分析定位上游问题?"
+    ],
+    "answerMarkdown": "## 结论\nnginx 排障分两类:配置类(404/语法/端口)和链路类(502/504/超时)。前者看 nginx -t、error.log、location 匹配,后者看 access log + upstream 状态 + 后端服务实际状态。\n\n## 原理与边界\n502 是「后端给了无效响应或连不上」,通常是后端服务挂了或没监听;504 是「上游超时」,后端响应慢或 proxy_read_timeout 太小。404 先确认 location 是否匹配、root/alias 路径与 try_files 写得对不对。worker 连接数到了上限会拒绝新连接,要查 worker_connections 与系统 ulimit。端口占用用 ss/lsof 反查。误区:上来就改配置而不看 error.log 和 access log,或把 502/504 混为一谈。\n\n## 生产实践\n在 PRJ-01 里 502/504 是我最常处理的网关排障:504 先查后端是不是慢(结合时延拆分的段耗时),再看 proxy_read_timeout 是否设得太短;502 查后端进程是否还活着、端口对不对。我的顺序是「error.log + access log 先看报错,再顺着转发关系查后端,最后才动配置」。把网关当成链路一环,而不是孤立地看 nginx。",
+    "memoryHook": "502 后端无响应、504 上游超时,先看日志再动配置",
+    "tags": [
+      "技术"
+    ],
+    "anchors": [
+      "PRJ-01",
+      "NUM-02"
+    ],
+    "gap": false,
+    "gapNote": "",
+    "priority": "T0",
+    "related": [
+      "T4-022"
+    ],
+    "srs": true
+  },
+  {
+    "id": "T4-027",
+    "chapter": "tech4",
+    "title": "基本命令",
+    "questions": [
+      "git 仓库初始化、克隆、提交的完整流程是什么?",
+      "add/commit/status/diff/log 各自作用?",
+      "fetch 和 pull 有什么区别?",
+      "tag 和 stash 的用途?"
+    ],
+    "answerMarkdown": "## 结论\ngit 基本命令覆盖建库(init/clone)、改动(add/commit/status/diff/log)、分支(branch/checkout/merge)、远程(remote/fetch/pull/push)、辅助(tag/stash)。核心是「工作区 -> 暂存区 -> 本地仓库 -> 远程仓库」的数据流。\n\n## 原理与边界\nadd 把改动放入暂存区,commit 把暂存区固化成一个提交,status 看当前状态、diff 看差异、log 看历史。fetch 只拉取远程更新到本地引用、不合并,pull = fetch + merge,这是高频区分点。tag 给提交打稳定标记(发版),stash 暂存未提交改动以便切分支。误区:把 add 当成保存、不知 commit 才是真正入库;或盲目 pull 覆盖本地改动。\n\n## 生产实践\n在 PRJ-01 的多方协作开发里(承建方 + 甲乙双方),我要求成员「小步提交、可回滚」,diff 和 log 用来追责时点:某个 bug 是哪次提交引入的,靠 log 定位。发版用 tag 锚定稳定版本,出事能回上一版。在交付治理层面,提交记录就是工作台账,我把它和 NUM-05 的 158 条问题闭环、44 条承诺合同化挂钩——承诺要有提交、问题要有修复提交,才能闭环。",
+    "memoryHook": "add 入暂存 commit 才入库,fetch 只拉不并,pull=fetch+merge",
+    "tags": [
+      "技术"
+    ],
+    "anchors": [
+      "PRJ-01",
+      "NUM-05"
+    ],
+    "gap": false,
+    "gapNote": "",
+    "priority": "T0",
+    "related": [
+      "T4-028"
+    ],
+    "srs": true
+  },
+  {
+    "id": "T4-028",
+    "chapter": "tech4",
+    "title": "分支管理与合并策略",
+    "questions": [
+      "有哪些主流分支模型(Git Flow / GitHub Flow)?",
+      "如何选择分支策略?",
+      "merge 和 rebase 有什么区别、怎么选?",
+      "如何做分支保护与代码评审?"
+    ],
+    "answerMarkdown": "## 结论\n主流分支模型两条路:Git Flow(main/develop/feature/release/hotfix 多分支、适合固定发版节奏)与 GitHub Flow(一条 main + 短命 feature 分支、持续交付)。核心是「主干保持可发布、feature 短命、合并有评审」。\n\n## 原理与边界\nmerge 保留分支历史、产生合并提交,历史呈网状但完整;rebase 把提交重新落到目标分支顶端,历史线性干净,但会改写提交,共享分支上 rebase 是雷区。分支保护要求 PR + 评审 + CI 通过才可合入。误区:长期不合并的大 feature 分支导致冲突爆炸;或公共分支 rebase 把协作搞乱。\n\n## 生产实践\n在 PRJ-01 里,双周迭代节奏决定了分支策略:feature 分支按迭代开、迭代内合并回主干、短命可控。我推动的是 merge + PR 评审,线上主干只接受评审过的合入。分支策略直接服务交付治理:158 条问题闭环、44 条承诺合同化(NUM-05)要能对应到具体分支和提交,评审记录就是「承诺改到位」的证据链。",
+    "memoryHook": "主干可发布、feature 短命,merge 保史 rebase 理线",
+    "tags": [
+      "技术"
+    ],
+    "anchors": [
+      "PRJ-01",
+      "NUM-05"
+    ],
+    "gap": false,
+    "gapNote": "",
+    "priority": "T0",
+    "related": [
+      "T4-027",
+      "T4-029",
+      "T4-030",
+      "T4-031"
+    ],
+    "srs": true
+  },
+  {
+    "id": "T4-029",
+    "chapter": "tech4",
+    "title": "冲突解决",
+    "questions": [
+      "哪些场景会触发 git 冲突?",
+      "冲突标记如何理解、如何手动解决?",
+      "如何用工具解决冲突?",
+      "如何避免冲突、冲突怎么预防?"
+    ],
+    "answerMarkdown": "## 结论\n冲突发生在两个分支同时改了同一文件的同一区域、git 无法自动合并时。解决思路:看懂冲突标记(<<<<<<< HEAD / ======= / >>>>>>> 对方)、决定保留哪边或如何合并、解决后标记完成并提交。\n\n## 原理与边界\ngit 自动合并是按「没被同时改的部分」做三路合并,只有同一位置改动才冲突。冲突标记分三段:HEAD(当前分支)、分隔符、对方分支。解决后 git add 标记已解决,再 commit。预防冲突靠「小步合入、经常同步主干、缩小文件职责」。误区:删冲突标记时误删有效代码,或直接选一边覆盖另一边而不看语义。\n\n## 生产实践\n在 PRJ-01 多方协作里,冲突最多出现在共享配置和接口定义文件上(多方都动同一份)。我的治理手段是:接口契约提前锁定、feature 短命早合并、冲突时拉着双方一起看语义而不是闭门选边。在项目管理视角,冲突不止技术问题——它往往是「两人责任区边界不清」的信号,我会从流程上拆解,和解决 158 条问题(NUM-05)的闭环一个逻辑:先定位根因,再定责到人。",
+    "memoryHook": "同区同文件才冲突,看懂三段标记,选边更看语义",
+    "tags": [
+      "技术"
+    ],
+    "anchors": [
+      "PRJ-01",
+      "NUM-05"
+    ],
+    "gap": false,
+    "gapNote": "",
+    "priority": "T1",
+    "related": [
+      "T4-028"
+    ],
+    "srs": true
+  },
+  {
+    "id": "T4-030",
+    "chapter": "tech4",
+    "title": "版本回滚与 reset/revert",
+    "questions": [
+      "git reset 和 git revert 有什么区别?",
+      "--soft/--mixed/--hard 的 reset 分别是什么?",
+      "已推送到远程的提交如何回滚?",
+      "如何用 reflog 找回误操作?"
+    ],
+    "answerMarkdown": "## 结论\n回滚两条路:reset 移动分支指针往回退(可改写历史),revert 生成一个「反向提交」抵消某次改动(保留历史)。已推送到共享分支的要用 revert,本地未推送的可用 reset。\n\n## 原理与边界\nreset --soft 只动 HEAD(改动回暂存区)、--mixed 回工作区(默认)、--hard 连工作区改动一起丢弃(危险)。revert 是新增一个与目标提交相反补丁的提交,历史可回滚不可篡改,适合公共分支。reflog 记录 HEAD 的所有移动,是误操作后的救命稻草。误区:在已 push 的分支上 reset --hard 强制推送,把他人拉取的提交历史改写,协作直接炸。\n\n## 生产实践\n在 PRJ-01 交付治理里,我定下铁律:主分支禁 push -f、禁 reset 共享历史,回滚用 revert,保证线上每次回退可追溯、可审计。误删或误 reset 用 reflog 找回。这个纪律和 44 条承诺合同化(NUM-05)一致:版本历史是合同承诺的载体,不能被 force push 抹掉,否则承诺没了凭据。",
+    "memoryHook": "revert 保留历史回滚,reset --hard 只在本地,reflog 是后悔药",
+    "tags": [
+      "技术"
+    ],
+    "anchors": [
+      "PRJ-01",
+      "NUM-05"
+    ],
+    "gap": false,
+    "gapNote": "",
+    "priority": "T0",
+    "related": [
+      "T4-028"
+    ],
+    "srs": true
+  },
+  {
+    "id": "T4-031",
+    "chapter": "tech4",
+    "title": "远程仓库与协作流程",
+    "questions": [
+      "多人协作的远程仓库流程是什么?",
+      "PR/MR 评审流程如何落地?",
+      "如何管理远程仓库与多人权限?",
+      "冲突、回滚如何在协作里规范化?"
+    ],
+    "answerMarkdown": "## 结论\n远程协作标准流程:克隆/同步 -> 拉 feature 分支 -> 提交 -> push -> 提 PR/MR -> 评审 -> 合并 -> 清理分支。远程仓库是团队唯一事实源,靠分支保护 + 评审 + CI 守住主干质量。\n\n## 原理与边界\n远程仓库(remote)是本地与团队共享代码的中枢,fetch/pull 同步下行、push 上行。PR/MR 是「我请求把我的分支合入主干」的评审载体,评审者看 diff、提意见、改后合并。权限上按角色分(读/写/管理员),主干分支设保护。误区:直接 push 主干、绕过评审;或大厂流程照搬到小团队,把效率拖死。\n\n## 生产实践\n在 PRJ-01 里,承建方团队 + 甲乙双方接口人的多方协作,我落地的是「feature 分支 + PR 评审 + 分支保护」流程,评审记录作为交付证据留存。这和 NUM-05 的 158 条问题闭环、44 条承诺合同化直接咬合:每个问题、每条承诺都能对应到 PR 和评审人。远程协作流程不是形式,是让「谁改了什么、为什么改、谁验收」全程可追溯的治理底座。",
+    "memoryHook": "分支+PR+评审+保护,远程仓库是唯一事实源",
+    "tags": [
+      "技术"
+    ],
+    "anchors": [
+      "PRJ-01",
+      "NUM-05"
+    ],
+    "gap": false,
+    "gapNote": "",
+    "priority": "T0",
+    "related": [
+      "T4-028"
+    ],
+    "srs": true
+  }
+]

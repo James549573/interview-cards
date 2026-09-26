@@ -40,7 +40,14 @@ const CHAPTERS = [
   { id: 'mod7', name: '模块7 · 业务口径（K-34）' },
   { id: 'xseries', name: 'X 系列 · 准 T0' },
   { id: 't1index', name: 'T1 速览（索引卡）' },
-  { id: 'appendix', name: '附录（参考卡）' }
+  { id: 'appendix', name: '附录（参考卡）' },
+  // 技术题库（薪多多知识点 × 简历 v13），由 out/tech-group*.json 并入，
+  // 产出受 RELIABILITY_PLAN.md 五道闸约束；排在项目卡之后，SRS 新卡顺序靠后
+  { id: 'tech1', name: '技术1 · 编程基础' },
+  { id: 'tech2', name: '技术2 · 数据与缓存' },
+  { id: 'tech3', name: '技术3 · 大模型应用' },
+  { id: 'tech4', name: '技术4 · 部署运维' },
+  { id: 'tech5', name: '技术5 · 工程交付' }
 ];
 
 function chapterOf(id) {
@@ -529,18 +536,42 @@ function main() {
     }
   }
 
+  // ---- 技术题库并入：out/tech-group*.json（受 anchors.json 约束的已审卡片）----
+  const TECH_FILES = [
+    'tech-group1.json',
+    'tech-group2.json',
+    'tech-group3a.json',
+    'tech-group3b.json',
+    'tech-group4.json',
+    'tech-group5.json'
+  ];
+  let techCount = 0;
+  for (const f of TECH_FILES) {
+    const p = path.join(__dirname, '..', 'out', f);
+    if (!fs.existsSync(p)) {
+      console.warn(`⚠ 缺少技术卡文件，跳过：${f}`);
+      continue;
+    }
+    for (const t of JSON.parse(fs.readFileSync(p, 'utf8'))) {
+      if (seen.has(t.id)) continue;
+      seen.set(t.id, t);
+      techCount++;
+    }
+  }
+
+  const chapterOrder = Object.fromEntries(CHAPTERS.map((c, i) => [c.id, i]));
   const cards = [...seen.values()].sort((a, b) => {
-    const order = ['mod1', 'mod2', 'mod3', 'mod4', 'mod5', 'mod6', 'mod7', 'xseries', 't1index', 'appendix'];
-    const d = order.indexOf(a.chapter) - order.indexOf(b.chapter);
+    const d = (chapterOrder[a.chapter] ?? 99) - (chapterOrder[b.chapter] ?? 99);
     if (d !== 0) return d;
     return a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
   });
 
-  const expect = { full: 42, t1: 32, appendix: 4, total: 78 };
+  const expect = { full: 42, t1: 32, appendix: 4, tech: 149, total: 227 };
   const got = {
     full: cards.filter((c) => /^([KX])-/.test(c.id)).length,
     t1: cards.filter((c) => c.chapter === 't1index').length,
     appendix: cards.filter((c) => c.chapter === 'appendix').length,
+    tech: cards.filter((c) => String(c.chapter).startsWith('tech')).length,
     total: cards.length
   };
   for (const k of Object.keys(expect)) {
@@ -585,7 +616,7 @@ function main() {
   const outPath = path.join(__dirname, '..', 'src', 'data', 'cards.json');
   fs.writeFileSync(outPath, JSON.stringify(data, null, 2), 'utf8');
 
-  console.log(`✓ 解析完成：完整卡 ${got.full} 张，T1 索引卡 ${got.t1} 张，附录卡 ${got.appendix} 张，共 ${got.total} 张`);
+  console.log(`✓ 解析完成：完整卡 ${got.full} 张，T1 索引卡 ${got.t1} 张，附录卡 ${got.appendix} 张，技术卡 ${techCount} 张，共 ${got.total} 张`);
   console.log(`✓ 输出：${outPath}`);
   if (got.total < 75) {
     console.error('✗ 卡片总数 < 75，请检查素材目录是否完整。');

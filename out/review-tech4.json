@@ -1,0 +1,202 @@
+[
+  {
+    "id": "T4-002",
+    "lens": "gov",
+    "level": "minor",
+    "problem": "把 NUM-02 的「实际 2.83s」写成「2.83s 预算」,与锚点口径不符(NUM-02 的预算是「≤ 3s」,2.83s 是实际值)",
+    "evidence": "才能定位到底哪一段超了 2.83s 预算",
+    "fix": "改为「哪一段超了 ≤3s 的 P95 预算(实际 2.83s)」,或直接引用 NUM-02 原文口径"
+  },
+  {
+    "id": "T4-003",
+    "lens": "arch",
+    "level": "major",
+    "problem": "related 单向连线:T4-003 指向 T4-001,但 T4-001 的 related 为 [\"T4-004\"],未回连 T4-003,违反 related 双向对称的硬约束",
+    "evidence": "\"related\": [\"T4-001\"]",
+    "fix": "在 T4-001 的 related 中补入 \"T4-003\"(或删除 T4-003→T4-001 这条单向边)"
+  },
+  {
+    "id": "T4-006",
+    "lens": "arch",
+    "level": "major",
+    "problem": "related 单向连线:T4-006 指向 T4-005,但 T4-005 的 related 为 [\"T4-002\"],未回连 T4-006,违反 related 双向对称的硬约束",
+    "evidence": "\"related\": [\"T4-005\"]",
+    "fix": "在 T4-005 的 related 中补入 \"T4-006\"(或删除 T4-006→T4-005 这条单向边)"
+  },
+  {
+    "id": "T4-007",
+    "lens": "arch",
+    "level": "major",
+    "problem": "related 单向连线:T4-007 指向 T4-006,但 T4-006 的 related 为 [\"T4-005\"],未回连 T4-007,违反 related 双向对称的硬约束",
+    "evidence": "\"related\": [\"T4-006\"]",
+    "fix": "在 T4-006 的 related 中补入 \"T4-007\"(或删除 T4-007→T4-006 这条单向边)"
+  },
+  {
+    "id": "T4-008",
+    "lens": "arch",
+    "level": "major",
+    "problem": "related 单向连线:T4-008 指向 T4-003,但 T4-003 的 related 为 [\"T4-001\"],未回连 T4-008,违反 related 双向对称的硬约束",
+    "evidence": "\"related\": [\"T4-003\"]",
+    "fix": "在 T4-003 的 related 中补入 \"T4-008\"(或删除 T4-008→T4-003 这条单向边)"
+  },
+  {
+    "id": "T4-009",
+    "lens": "arch",
+    "level": "major",
+    "problem": "related 单向连线:T4-009 指向 T4-006,但 T4-006 的 related 为 [\"T4-005\"],未回连 T4-009,违反 related 双向对称的硬约束",
+    "evidence": "\"related\": [\"T4-006\"]",
+    "fix": "在 T4-006 的 related 中补入 \"T4-009\"(或删除 T4-009→T4-006 这条单向边)"
+  },
+  {
+    "id": "T4-011",
+    "lens": "gov",
+    "level": "minor",
+    "problem": "生产实践用「半天部署」「十几分钟」等具体时长数字,不在任何锚点 code 的 quotable 内,属素材外自造数字",
+    "evidence": "这让私有化交付从「半天部署」收敛到「十几分钟可复现」。",
+    "fix": "改为定性表述(如「显著缩短交付时间」),或改用锚点表中已有的交付治理数字"
+  },
+  {
+    "id": "T4-012",
+    "lens": "arch",
+    "level": "major",
+    "problem": "related 单向连线:T4-012 指向 T4-010,但 T4-010 的 related 为 [\"T4-011\"],未回连 T4-012,违反 related 双向对称的硬约束",
+    "evidence": "\"related\": [\"T4-010\"]",
+    "fix": "在 T4-010 的 related 中补入 \"T4-012\"(或删除 T4-012→T4-010 这条单向边)"
+  },
+  {
+    "id": "T4-013",
+    "lens": "arch",
+    "level": "major",
+    "problem": "related 单向连线:T4-013 指向 T4-010,但 T4-010 的 related 为 [\"T4-011\"],未回连 T4-013,违反 related 双向对称的硬约束",
+    "evidence": "\"related\": [\"T4-010\"]",
+    "fix": "在 T4-010 的 related 中补入 \"T4-013\"(或删除 T4-013→T4-010 这条单向边)"
+  },
+  {
+    "id": "T4-014",
+    "lens": "arch",
+    "level": "major",
+    "problem": "related 单向连线:T4-014 指向 T4-011,但 T4-011 的 related 为 [\"T4-010\"],未回连 T4-014,违反 related 双向对称的硬约束",
+    "evidence": "\"related\": [\"T4-011\"]",
+    "fix": "在 T4-011 的 related 中补入 \"T4-014\"(或删除 T4-014→T4-011 这条单向边)"
+  },
+  {
+    "id": "T4-015",
+    "lens": "arch",
+    "level": "major",
+    "problem": "related 单向连线:T4-015 指向 T4-011,但 T4-011 的 related 为 [\"T4-010\"],未回连 T4-015,违反 related 双向对称的硬约束",
+    "evidence": "\"related\": [\"T4-011\"]",
+    "fix": "在 T4-011 的 related 中补入 \"T4-015\"(或删除 T4-015→T4-011 这条单向边)"
+  },
+  {
+    "id": "T4-016",
+    "lens": "arch",
+    "level": "major",
+    "problem": "related 单向连线:T4-016 指向 T4-012,但 T4-012 的 related 为 [\"T4-010\"],未回连 T4-016,违反 related 双向对称的硬约束",
+    "evidence": "\"related\": [\"T4-012\"]",
+    "fix": "在 T4-012 的 related 中补入 \"T4-016\"(或删除 T4-016→T4-012 这条单向边)"
+  },
+  {
+    "id": "T4-017",
+    "lens": "arch",
+    "level": "major",
+    "problem": "related 单向连线:T4-017 指向 T4-011,但 T4-011 的 related 为 [\"T4-010\"],未回连 T4-017,违反 related 双向对称的硬约束",
+    "evidence": "\"related\": [\"T4-011\"]",
+    "fix": "在 T4-011 的 related 中补入 \"T4-017\"(或删除 T4-017→T4-011 这条单向边)"
+  },
+  {
+    "id": "T4-018",
+    "lens": "arch",
+    "level": "major",
+    "problem": "related 单向连线:T4-018 指向 T4-012,但 T4-012 的 related 为 [\"T4-010\"],未回连 T4-018,违反 related 双向对称的硬约束",
+    "evidence": "\"related\": [\"T4-012\"]",
+    "fix": "在 T4-012 的 related 中补入 \"T4-018\"(或删除 T4-018→T4-012 这条单向边)"
+  },
+  {
+    "id": "T4-019",
+    "lens": "arch",
+    "level": "major",
+    "problem": "related 单向连线:T4-019 指向 T4-010,但 T4-010 的 related 为 [\"T4-011\"],未回连 T4-019,违反 related 双向对称的硬约束",
+    "evidence": "\"related\": [\"T4-010\"]",
+    "fix": "在 T4-010 的 related 中补入 \"T4-019\"(或删除 T4-019→T4-010 这条单向边)"
+  },
+  {
+    "id": "T4-020",
+    "lens": "arch",
+    "level": "major",
+    "problem": "related 单向连线:T4-020 指向 T4-011,但 T4-011 的 related 为 [\"T4-010\"],未回连 T4-020,违反 related 双向对称的硬约束",
+    "evidence": "\"related\": [\"T4-011\"]",
+    "fix": "在 T4-011 的 related 中补入 \"T4-020\"(或删除 T4-020→T4-011 这条单向边)"
+  },
+  {
+    "id": "T4-023",
+    "lens": "arch",
+    "level": "major",
+    "problem": "related 单向连线:T4-023 指向 T4-022,但 T4-022 的 related 为 [\"T4-021\"],未回连 T4-023,违反 related 双向对称的硬约束",
+    "evidence": "\"related\": [\"T4-022\"]",
+    "fix": "在 T4-022 的 related 中补入 \"T4-023\"(或删除 T4-023→T4-022 这条单向边)"
+  },
+  {
+    "id": "T4-024",
+    "lens": "arch",
+    "level": "major",
+    "problem": "related 单向连线:T4-024 指向 T4-022,但 T4-022 的 related 为 [\"T4-021\"],未回连 T4-024,违反 related 双向对称的硬约束",
+    "evidence": "\"related\": [\"T4-022\"]",
+    "fix": "在 T4-022 的 related 中补入 \"T4-024\"(或删除 T4-024→T4-022 这条单向边)"
+  },
+  {
+    "id": "T4-025",
+    "lens": "arch",
+    "level": "major",
+    "problem": "related 单向连线:T4-025 指向 T4-021,但 T4-021 的 related 为 [\"T4-022\"],未回连 T4-025,违反 related 双向对称的硬约束",
+    "evidence": "\"related\": [\"T4-021\"]",
+    "fix": "在 T4-021 的 related 中补入 \"T4-025\"(或删除 T4-025→T4-021 这条单向边)"
+  },
+  {
+    "id": "T4-025",
+    "lens": "gov",
+    "level": "minor",
+    "problem": "把 NUM-02 的「实际 2.83s」当作「P95 时延预算」引用,与锚点口径不符(预算为「≤ 3s」,2.83s 是实际值)",
+    "evidence": "我把 P95 时延预算当成网关层的量化目标(NUM-02 的 2.83s)",
+    "fix": "改为「NUM-02 的 P95 预算(≤3s,实际 2.83s)」,按锚点原文口径表述"
+  },
+  {
+    "id": "T4-026",
+    "lens": "arch",
+    "level": "major",
+    "problem": "related 单向连线:T4-026 指向 T4-022,但 T4-022 的 related 为 [\"T4-021\"],未回连 T4-026,违反 related 双向对称的硬约束",
+    "evidence": "\"related\": [\"T4-022\"]",
+    "fix": "在 T4-022 的 related 中补入 \"T4-026\"(或删除 T4-026→T4-022 这条单向边)"
+  },
+  {
+    "id": "T4-028",
+    "lens": "pm",
+    "level": "major",
+    "problem": "把 PRJ-02(产业链平台)的锚点数字 NUM-09「32 个 Sprint」挂到 PRJ-01 上,项目事实归属错误(NUM-09 出自产业链口径裁定条)",
+    "evidence": "在 PRJ-01 里,双周迭代节奏(NUM-09 的 32 个 Sprint)决定了分支策略",
+    "fix": "NUM-09 属产业链平台(PRJ-02),该数字应删除或改挂 PRJ-02,PRJ-01 处只作定性表述"
+  },
+  {
+    "id": "T4-029",
+    "lens": "arch",
+    "level": "major",
+    "problem": "related 单向连线:T4-029 指向 T4-028,但 T4-028 的 related 为 [\"T4-027\"],未回连 T4-029,违反 related 双向对称的硬约束",
+    "evidence": "\"related\": [\"T4-028\"]",
+    "fix": "在 T4-028 的 related 中补入 \"T4-029\"(或删除 T4-029→T4-028 这条单向边)"
+  },
+  {
+    "id": "T4-030",
+    "lens": "arch",
+    "level": "major",
+    "problem": "related 单向连线:T4-030 指向 T4-028,但 T4-028 的 related 为 [\"T4-027\"],未回连 T4-030,违反 related 双向对称的硬约束",
+    "evidence": "\"related\": [\"T4-028\"]",
+    "fix": "在 T4-028 的 related 中补入 \"T4-030\"(或删除 T4-030→T4-028 这条单向边)"
+  },
+  {
+    "id": "T4-031",
+    "lens": "arch",
+    "level": "major",
+    "problem": "related 单向连线:T4-031 指向 T4-028,但 T4-028 的 related 为 [\"T4-027\"],未回连 T4-031,违反 related 双向对称的硬约束",
+    "evidence": "\"related\": [\"T4-028\"]",
+    "fix": "在 T4-028 的 related 中补入 \"T4-031\"(或删除 T4-031→T4-028 这条单向边)"
+  }
+]

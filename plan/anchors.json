@@ -1,0 +1,308 @@
+{
+  "version": 1,
+  "authority": "张金山_简历_v13_final.pdf（文本取自同目录 resume_v13.html 去标签）",
+  "rule": "本表是全库唯一事实源。新卡引用数字/编号必须在本表内逐字匹配；禁止引用本表 conflicts[].discarded 与 gaps[].code 之外未定义的内容。",
+  "numberingSystem": {
+    "newPrefixes": {
+      "CV": "简历个人事实（经历/职级/职责/教育/联系方式）",
+      "PRJ": "项目事实（两个主力项目 + 副线）",
+      "NUM": "可引用数字（含口径与出处）",
+      "DEC": "技术/架构决策（保留原 ADR 编号写入 originalCode 溯源）",
+      "GOV": "合规红线与验收门槛（越权0次、G1-G10、R21、AC 系列等）",
+      "GAP": "已知素材缺口（含 M_LINE_PENDING 12 条锁定不到编号）"
+    },
+    "legacyPrefixes": "K/X/T1=卡片；ADR=架构决策；AI=建设对象；G=上线门槛；R=RAG线决策（R1-R21）；M=管理线决策；N/V/I=素材行号/钩子；C/T=附录清单。",
+    "conflictWarning": "X 系列卡的 R/M 挂钩是「三体预演」轮次编号，与 K 卡 RAG 线 R1-R21 编号是两套体系；R22+ 已重分类为「演练复盘引用」。旧 R/M 编号在复用前必须在 conflicts 中登记，不得混用。"
+  },
+  "conflicts": [
+    {
+      "id": "CF-01",
+      "topic": "P95 时延分段",
+      "adopted": "6 段",
+      "discarded": "7 段",
+      "discardedSource": "resume_current_v3.txt",
+      "where": "v13 智慧教育指标条「2.83 s P95 ≤ 3s 预算 6 段拆解管控」"
+    },
+    {
+      "id": "CF-02",
+      "topic": "产业链平台二期截止",
+      "adopted": "2023.03",
+      "discarded": "2025.03",
+      "discardedSource": "resume_current_v3.txt",
+      "where": "v13 项目经历产业链标题行（2021.03 – 2023.03）"
+    },
+    {
+      "id": "CF-03",
+      "topic": "数据表规模",
+      "adopted": "229 张（编号零断点）",
+      "discarded": "290 表 / 2,175 列",
+      "discardedSource": "rewrite-out/BRIEF.md",
+      "where": "v13 工作经验台账化交付治理条"
+    },
+    {
+      "id": "CF-04",
+      "topic": "编号体系两套（结构冲突非数字）",
+      "desc": "X 卡 R/M 挂钩为三体预演轮次编号，与 K 卡 RAG 线 R1-R21 两套体系；R22+ 为演练复盘引用。",
+      "evidence": "AUDIT_REPORT_V2.md §五"
+    }
+  ],
+  "anchors": [
+    {
+      "code": "CV-01",
+      "type": "cv",
+      "where": "v13 个人信息",
+      "text": "张金山，7 年经验，求职意向 AI 项目经理 / FDE / AI 技术经理 / Agent 开发经理，到岗随时、城市不限",
+      "quotable": [],
+      "note": "不公开电话与邮箱为硬数字（涉及隐私，卡片不写入联系方式）"
+    },
+    {
+      "code": "CV-02",
+      "type": "cv",
+      "where": "v13 教育背景",
+      "text": "重庆三峡学院，通信工程，全日制本科，2015.09 – 2019.06",
+      "quotable": ["2015.09 – 2019.06", "通信工程", "全日制本科"],
+      "note": ""
+    },
+    {
+      "code": "CV-03",
+      "type": "cv",
+      "where": "v13 工作经验 2024.03 – 2026.08 杭州亚信科技",
+      "text": "项目经理，智慧教育项目 AI 小组长，牵头承建方侧 AI 线，对接甲乙双方接口人、工时逐模块对平",
+      "quotable": ["2024.03 – 2026.08", "项目经理", "AI 小组长"],
+      "note": "职级为「项目经理」，不同于 v3 旧表写的「后端开发工程师（高级）」，以 v13 为准"
+    },
+    {
+      "code": "CV-04",
+      "type": "cv",
+      "where": "v13 工作经验 2021.03 – 2024.03 杭州博彦科技",
+      "text": "大数据开发工程师（中级），外派至杭州亚信科技项目组，因表现优秀转入甲方",
+      "quotable": ["2021.03 – 2024.03", "大数据开发工程师（中级）", "外派"],
+      "note": ""
+    },
+    {
+      "code": "CV-05",
+      "type": "cv",
+      "where": "v13 工作经验 2019.07 – 2021.01 新疆莎车县政府",
+      "text": "公务员（县政府信息办），协调乙方供应商推进政务网站建设，构成理解甲方立场的底层经验",
+      "quotable": ["2019.07 – 2021.01", "公务员", "县政府信息办"],
+      "note": ""
+    },
+    {
+      "code": "PRJ-01",
+      "type": "project",
+      "where": "v13 项目经历 浙江省智慧教育平台 AI 能力建设",
+      "text": "2023.03 – 2026.08，承建方杭州亚信科技；甲方浙江省教育技术中心、乙方中国移动浙江创新研究院。省厅级三方协作政务 AI 项目",
+      "quotable": ["2023.03 – 2026.08", "浙江省教育技术中心", "中国移动浙江创新研究院"],
+      "allowedTopics": ["RAG", "Agent", "langchain", "langgraph", "fastapi", "mysql", "redis", "linux", "docker", "nginx", "http协议", "知识图谱"],
+      "note": "主力项目一，几乎所有「生产实践」段应优先落到此项目"
+    },
+    {
+      "code": "PRJ-02",
+      "type": "project",
+      "where": "v13 项目经历 浙江省产业链分析平台（v0 → 一期 → 二期）",
+      "text": "2021.03 – 2023.03，数据线为主、客串产品。省级产业监测平台，历经 v0（4条链）→ 一期（8条链）→ 二期（20条链）",
+      "quotable": ["2021.03 – 2023.03", "4 条链", "8 条链", "20 条链"],
+      "allowedTopics": ["mysql", "redis", "数据工程", "NL2SQL", "RAG", "python"],
+      "note": "主力项目二，侧重数据工程与智能问数"
+    },
+    {
+      "code": "PRJ-03",
+      "type": "project",
+      "where": "v13 其他项目",
+      "text": "工业互联网平台（数据为主、后端为辅）；人力社保主数据中心托管（2022.06–2022.10 数据工程师）；手机信令游客行为监测（2023.03–2023.05）；需求调研中策-ET工业大脑、横店影视产业大脑二期",
+      "quotable": [],
+      "allowedTopics": [],
+      "note": "副线项目，仅在必要时引用，不主动展开"
+    },
+    {
+      "code": "NUM-01",
+      "type": "number",
+      "where": "v13 智慧教育指标条",
+      "text": "越权召回 0 次；网关绕过 0 处；场景码校验 100%；一致性总审 11 项、严重问题 0；验收门槛 10 项",
+      "quotable": ["0 次", "0 处", "100%", "11 项", "0", "10 项"],
+      "allowedTopics": ["langchain", "agent", "RAG"],
+      "note": "「0 次/0 处」为写死口径，见 GOV-01/GOV-02"
+    },
+    {
+      "code": "NUM-02",
+      "type": "number",
+      "where": "v13 智慧教育指标条",
+      "text": "P95 ≤ 3s 预算（实际 2.83s），6 段拆解管控",
+      "quotable": ["2.83s", "≤ 3s", "6 段"],
+      "allowedTopics": ["fastapi", "http协议", "nginx", "linux", "性能"],
+      "note": "段落数为 6，禁止写 7（见 CF-01）"
+    },
+    {
+      "code": "NUM-03",
+      "type": "number",
+      "where": "v13 智慧教育范围裁决条",
+      "text": "57 个候选场景收敛为 26 个建设对象（10 Agent / 5 基础设施 / 11 轻量）",
+      "quotable": ["57 个", "26 个", "10 Agent", "5 基础设施", "11 轻量"],
+      "allowedTopics": ["agent", "RAG", "langgraph"],
+      "note": ""
+    },
+    {
+      "code": "NUM-04",
+      "type": "number",
+      "where": "v13 智慧教育风险可交易条",
+      "text": "准备金按形态计提：30% 档 36 个、50% 档 6 个",
+      "quotable": ["30% 档 36 个", "50% 档 6 个"],
+      "allowedTopics": ["agent", "项目管理"],
+      "note": ""
+    },
+    {
+      "code": "NUM-05",
+      "type": "number",
+      "where": "v13 工作经验台账化交付治理条",
+      "text": "229 张数据表编号零断点；158 条问题闭环；44 条承诺合同化",
+      "quotable": ["229 张", "编号零断点", "158 条", "44 条"],
+      "allowedTopics": ["mysql", "数据工程", "项目管理"],
+      "note": "数据表规模以 229 张为准，禁止 290 表（见 CF-03）"
+    },
+    {
+      "code": "NUM-06",
+      "type": "number",
+      "where": "v13 产业链架构收敛条",
+      "text": "DW 层 1,106 张表重构为 250 张（指标中台 4 + ADS 246），降幅 77.4%",
+      "quotable": ["1,106", "250", "指标中台 4", "ADS 246", "77.4%"],
+      "allowedTopics": ["mysql", "数据工程", "数仓"],
+      "note": ""
+    },
+    {
+      "code": "NUM-07",
+      "type": "number",
+      "where": "v13 产业链平台条",
+      "text": "业务规模扩 2.5 倍，全库表数反降 2.0%",
+      "quotable": ["2.5 倍", "2.0%"],
+      "allowedTopics": ["数据工程", "数仓"],
+      "note": ""
+    },
+    {
+      "code": "NUM-08",
+      "type": "number",
+      "where": "v13 产业链问数可信条",
+      "text": "1,200 条问答评测集 + 3,000 条 NL2SQL 评测集；问答事实正确率≥90%、幻觉率≤3%、拒答率≥95%；NL2SQL 可执行率≥92%",
+      "quotable": ["1,200 条", "3,000 条", "≤3%", "≥95%", "≥92%", "≥90%"],
+      "allowedTopics": ["RAG", "NL2SQL", "mysql", "python"],
+      "note": ""
+    },
+    {
+      "code": "NUM-09",
+      "type": "number",
+      "where": "v13 产业链口径裁定条",
+      "text": "二期需求条目 1,046 条、双周迭代 32 个 Sprint",
+      "quotable": ["1,046 条", "32 个 Sprint"],
+      "allowedTopics": ["项目管理", "数据工程"],
+      "note": ""
+    },
+    {
+      "code": "DEC-01",
+      "type": "decision",
+      "originalCode": "ADR-410-01",
+      "where": "cards.json K-01 / source 证据源包",
+      "text": "受控指标问答：让模型只「选指标」不「写 SQL」，SQL 由系统 compile_sql 纯函数编译产出，锁 metric_version",
+      "allowedTopics": ["RAG", "NL2SQL", "mysql", "python"],
+      "note": "本决策被引用次数最多，是口径锁版本的核心论证"
+    },
+    {
+      "code": "DEC-02",
+      "type": "decision",
+      "originalCode": "K-03",
+      "where": "cards.json K-03",
+      "text": "权限过滤前置：权限校验放检索层，进入上下文不可撤销",
+      "allowedTopics": ["RAG", "agent", "知识图谱"],
+      "note": ""
+    },
+    {
+      "code": "DEC-03",
+      "type": "decision",
+      "originalCode": "K-17",
+      "where": "cards.json K-17",
+      "text": "三路检索（向量/图谱多跳/关键词）不做分数融合，先合并去重再统一重排",
+      "allowedTopics": ["RAG", "知识图谱", "langchain"],
+      "note": ""
+    },
+    {
+      "code": "DEC-04",
+      "type": "decision",
+      "where": "v13 智慧教育技术判断条",
+      "text": "LangGraph / Dify 分层选型，确定性状态机为主干，ADR 论证不引入多智能体自由协作框架",
+      "allowedTopics": ["langgraph", "langchain", "agent", "Dify"],
+      "note": ""
+    },
+    {
+      "code": "DEC-05",
+      "type": "decision",
+      "originalCode": "R6",
+      "where": "cards.json / AUDIT_REPORT_V2 用户点名 R6",
+      "text": "向量库 Milvus + pgvector 双选，禁止单一向量库方案（防环境锁死/私有化部署）；BGE-reranker-v2-m3 本地化部署，禁用商用/外部重排 API（数据不出域）",
+      "allowedTopics": ["RAG", "langchain", "知识图谱"],
+      "note": ""
+    },
+    {
+      "code": "DEC-06",
+      "type": "decision",
+      "where": "v13 后端工程化与内容安全条",
+      "text": "审核三级串联，审核异步、配额校验前置同步；fail-open / fail-closed 按场景分级（审计、配额必须 fail-closed）",
+      "allowedTopics": ["redis", "fastapi", "http协议", "linux"],
+      "note": "禁止引用 Aho-Corasick 及 <5ms/<50ms/<2s 时延数字（v13 与素材均无出处）"
+    },
+    {
+      "code": "GOV-01",
+      "type": "compliance",
+      "originalCode": "AC-03",
+      "where": "codes.json AC-03 / K-19",
+      "text": "越权召回 0 次——写死，不写「≤1%」或「≥99%」",
+      "allowedTopics": ["RAG", "agent", "langchain"],
+      "note": "越权没有可接受比例"
+    },
+    {
+      "code": "GOV-02",
+      "type": "compliance",
+      "originalCode": "AC-06 / AC-07",
+      "where": "codes.json",
+      "text": "缺陷处置率 100%（AC-06）；授权挂接率 100%（AC-07）——写死",
+      "allowedTopics": ["agent", "项目管理"],
+      "note": ""
+    },
+    {
+      "code": "GOV-03",
+      "type": "compliance",
+      "where": "v13 智慧教育指标条 / source 素材",
+      "text": "10 项可验证验收门槛（G1–G10 上线门禁：G1「AI 结论=0」不给结论、G9 首批 ≥50 指标已审批才开问答入口）",
+      "allowedTopics": ["agent", "RAG", "项目管理"],
+      "note": ""
+    },
+    {
+      "code": "GOV-04",
+      "type": "compliance",
+      "originalCode": "R21",
+      "where": "codes.json R21",
+      "text": "合规红线十二禁项（引用与审计不可带病返回、no_hit 强制拒答、查询侧原文不落库用 query_hash 等）",
+      "allowedTopics": ["RAG", "agent", "知识图谱"],
+      "note": ""
+    },
+    {
+      "code": "GOV-05",
+      "type": "compliance",
+      "where": "DEC-06 关联 / source 素材",
+      "text": "SQL 全审计，审计写入失败即 fail-closed 阻断调用、事后不可补",
+      "allowedTopics": ["mysql", "RAG"],
+      "note": ""
+    }
+  ],
+  "gaps": [
+    { "code": "GAP-01", "legacyCode": "M3", "desc": "素材全文 0 次出现，无法锁定内容", "note": "可能在 D 系列 D3 条目" },
+    { "code": "GAP-02", "legacyCode": "M8", "desc": "素材全文 0 次出现", "note": "可能在 D8 条目" },
+    { "code": "GAP-03", "legacyCode": "M9", "desc": "素材全文 0 次出现", "note": "可能在 D9 条目" },
+    { "code": "GAP-04", "legacyCode": "M10", "desc": "素材全文 0 次出现", "note": "可能在 D10 条目" },
+    { "code": "GAP-05", "legacyCode": "M13", "desc": "素材全文 0 次出现", "note": "可能在 D13 条目" },
+    { "code": "GAP-06", "legacyCode": "M14", "desc": "素材全文 0 次出现", "note": "可能在 D14 条目" },
+    { "code": "GAP-07", "legacyCode": "M16", "desc": "素材全文 0 次出现", "note": "可能在 D16 条目" },
+    { "code": "GAP-08", "legacyCode": "M17", "desc": "素材全文 0 次出现", "note": "可能在 D17 条目" },
+    { "code": "GAP-09", "legacyCode": "M18", "desc": "素材全文 0 次出现", "note": "可能在 D18 条目" },
+    { "code": "GAP-10", "legacyCode": "M19", "desc": "素材全文 0 次出现（V5 已撤与 K-19 同源标注，主题句 19 归属 M27）", "note": "" },
+    { "code": "GAP-11", "legacyCode": "M20", "desc": "素材全文 0 次出现（V5 已撤与 K-22 同源标注，主题句 20 归属 M28）", "note": "" },
+    { "code": "GAP-12", "legacyCode": "M33", "desc": "素材全文 0 次出现", "note": "可能在 D33 条目" }
+  ]
+}

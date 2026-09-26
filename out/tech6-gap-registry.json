@@ -1,0 +1,54 @@
+{
+  "generatedAt": "2026-09-26",
+  "purpose": "tech6 · 缺口登记（RELIABILITY_PLAN §五：tech6 不产新卡，只做连线与缺口登记）",
+  "cardTotal": 149,
+  "gapCardCount": 4,
+  "anchorGaps": [
+    { "code": "GAP-01", "legacyCode": "M3", "desc": "素材全文 0 次出现，无法锁定内容", "note": "可能在 D 系列 D3 条目" },
+    { "code": "GAP-02", "legacyCode": "M8", "desc": "素材全文 0 次出现", "note": "可能在 D8 条目" },
+    { "code": "GAP-03", "legacyCode": "M9", "desc": "素材全文 0 次出现", "note": "可能在 D9 条目" },
+    { "code": "GAP-04", "legacyCode": "M10", "desc": "素材全文 0 次出现", "note": "可能在 D10 条目" },
+    { "code": "GAP-05", "legacyCode": "M13", "desc": "素材全文 0 次出现", "note": "可能在 D13 条目" },
+    { "code": "GAP-06", "legacyCode": "M14", "desc": "素材全文 0 次出现", "note": "可能在 D14 条目" },
+    { "code": "GAP-07", "legacyCode": "M16", "desc": "素材全文 0 次出现", "note": "可能在 D16 条目" },
+    { "code": "GAP-08", "legacyCode": "M17", "desc": "素材全文 0 次出现", "note": "可能在 D17 条目" },
+    { "code": "GAP-09", "legacyCode": "M18", "desc": "素材全文 0 次出现", "note": "可能在 D18 条目" },
+    { "code": "GAP-10", "legacyCode": "M19", "desc": "素材全文 0 次出现（V5 已撤与 K-19 同源标注，主题句 19 归属 M27）", "note": "" },
+    { "code": "GAP-11", "legacyCode": "M20", "desc": "素材全文 0 次出现（V5 已撤与 K-22 同源标注，主题句 20 归属 M28）", "note": "" },
+    { "code": "GAP-12", "legacyCode": "M33", "desc": "素材全文 0 次出现", "note": "可能在 D33 条目" }
+  ],
+  "cardGaps": [
+    {
+      "id": "TT1-013",
+      "chapter": "tech1",
+      "title": "websocket",
+      "missing": "简历 v13 素材未记录实时推送/WebSocket 的具体落地案例",
+      "need": "PRJ-01 是否用过 SSE 或 WebSocket、选型依据与断线重连处理"
+    },
+    {
+      "id": "T2-007",
+      "chapter": "tech2",
+      "title": "主从复制与哨兵",
+      "missing": "简历 v13 与锚点未记录 redis 主从复制/哨兵的生产落地，仅可确认 redis 在项目中作缓存辅助",
+      "need": "主从架构、同步策略或故障转移的实操口径"
+    },
+    {
+      "id": "T2-008",
+      "chapter": "tech2",
+      "title": "集群与分片",
+      "missing": "简历 v13 与锚点未记录 redis 集群/分片的生产落地，仅可确认 redis 作缓存辅助",
+      "need": "分片规模、槽迁移或 hash tag 的实操口径"
+    },
+    {
+      "id": "T5-004",
+      "chapter": "tech5",
+      "title": "BPMN 建模",
+      "missing": "简历 v13 与锚点未记录 BPMN 或流程引擎的落地案例",
+      "need": "跨系统可执行流程建模（审批流/门禁流转）的真实项目落点与选型依据"
+    }
+  ],
+  "crossGroupLinks": {
+    "status": "skipped",
+    "reason": "related 字段当前未在 UI 呈现（RefModal 的 relatedCards 取自 codes.js，与卡片 related 无关），跨组连线无用户可见收益；且生成阶段已约束 related 仅连本组内，强行跨组会破坏已验证的组内对称不变量。组内 related 已全部通过双向对称 + 无悬空校验。"
+  }
+}
