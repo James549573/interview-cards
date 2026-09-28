@@ -4,6 +4,7 @@ import { CARDS, CHAPTER_MAP } from './lib/cards';
 import { verifyPat, findOrCreateGist, fetchProgress, mergeProgress, pushProgress, createUploader } from './lib/github';
 import { todayStats } from './lib/srs';
 import { syncFromProgress, onChange as onNoteChange } from './lib/notes';
+import { applyEdits, onChange as onCardEditChange } from './lib/cardEdits';
 import LoginPage from './components/LoginPage.jsx';
 import TopBar from './components/TopBar.jsx';
 import BrowseView from './components/BrowseView.jsx';
@@ -43,7 +44,25 @@ export function App() {
   // 编号补充说明（方案 A）：progress 变化后刷新组件缓存；组件保存时并入 progress 并触发 Gist 同步
   useEffect(() => {
     syncFromProgress(progress);
+    applyEdits(progress.cardEdits);
   }, [progress]);
+  useEffect(() => {
+    return onCardEditChange((evt) => {
+      setProgress((p) => {
+        let cardEdits;
+        if (evt.type === 'resetAll') {
+          cardEdits = {};
+        } else {
+          cardEdits = { ...(p.cardEdits || {}) };
+          if (evt.type === 'save') cardEdits[evt.id] = evt.entry;
+          else if (evt.type === 'delete') delete cardEdits[evt.id];
+        }
+        return { ...p, updatedAt: Date.now(), cardEdits };
+      });
+      uploader.schedule();
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   useEffect(() => {
     return onNoteChange((evt) => {
       if (evt && evt.type === 'save') {

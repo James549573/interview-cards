@@ -1,10 +1,12 @@
 import { useRef } from 'preact/hooks';
 import { mergeProgress } from '../lib/github';
 import { GENERATED_AT } from '../lib/cards';
+import { getEdits, resetAllEdits } from '../lib/cardEdits';
 
 export default function SettingsView({ theme, setTheme, progress, onImport, onClearLocal, onLogout }) {
   const fileRef = useRef(null);
   const confirmRef = useRef(false);
+  const resetEditsRef = useRef(false);
 
   function exportProgress() {
     const blob = new Blob([JSON.stringify(progress, null, 2)], { type: 'application/json' });
@@ -13,6 +15,28 @@ export default function SettingsView({ theme, setTheme, progress, onImport, onCl
     a.download = `interview-cards-progress-${new Date().toISOString().slice(0, 10)}.json`;
     a.click();
     URL.revokeObjectURL(a.href);
+  }
+
+  function exportEdits() {
+    const edits = getEdits();
+    const blob = new Blob([JSON.stringify(edits, null, 2)], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `card-edits-${new Date().toISOString().slice(0, 10)}.json`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  }
+
+  function resetAllMyEdits() {
+    if (!resetEditsRef.current) {
+      resetEditsRef.current = true;
+      setTimeout(() => (resetEditsRef.current = false), 4000);
+      alert('再点一次「全部还原原版」确认执行（4 秒内），所有内容修改将被删除');
+      return;
+    }
+    resetEditsRef.current = false;
+    resetAllEdits();
+    alert('已全部还原为原版');
   }
 
   async function importProgress(e) {
@@ -79,6 +103,28 @@ export default function SettingsView({ theme, setTheme, progress, onImport, onCl
           </button>
         </div>
         <p class="text-xs text-gray-400 mt-2">导入采用卡片级合并（按 updatedAt 取新），不会覆盖较新的记录。</p>
+      </div>
+
+      <div class="bg-lightcard dark:bg-darkcard border border-gray-200 dark:border-darkborder rounded-xl p-4">
+        <h3 class="font-bold mb-3">内容修改</h3>
+        <p class="text-xs text-gray-400 mb-3">
+          在浏览页或复习卡上点 ✏️ 可直接修改卡片内容，修改保存在你账号的 Gist 里并自动同步到所有登录设备。
+          当前已修改 <b class="text-gray-700 dark:text-gray-200">{Object.keys(getEdits()).length}</b> 张卡。
+        </p>
+        <div class="flex flex-wrap gap-2">
+          <button onClick={exportEdits} class="px-3 py-2 rounded-lg bg-gray-100 dark:bg-gray-700 text-sm min-h-[44px]">
+            导出修改 JSON
+          </button>
+          <button
+            onClick={resetAllMyEdits}
+            class="px-3 py-2 rounded-lg bg-red-600/90 hover:bg-red-600 text-white text-sm min-h-[44px]"
+          >
+            全部还原原版
+          </button>
+        </div>
+        <p class="text-xs text-gray-400 mt-2">
+          如需把修改固化为线上母版（所有访客可见），把导出的 card-edits JSON 发给维护者合入数据源。
+        </p>
       </div>
 
       <div class="bg-lightcard dark:bg-darkcard border border-gray-200 dark:border-darkborder rounded-xl p-4">

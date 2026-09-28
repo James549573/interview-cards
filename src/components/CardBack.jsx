@@ -3,12 +3,16 @@ import { marked } from 'marked';
 import { CHAPTER_MAP } from '../lib/cards';
 import { buildTemplate, copyText } from '../lib/clipboard';
 import { annotateCodes } from '../lib/codes';
+import { useRev } from '../lib/cardEdits';
 import RefModal from './RefModal.jsx';
+import CardEditor from './CardEditor.jsx';
 
 export default function CardBack({ card, onNextReviewPreview, onFlipBack }) {
   const [refCode, setRefCode] = useState(null);
-  const { html: annotated } = useMemo(() => annotateCodes(card.answerMarkdown), [card]);
-  const html = useMemo(() => marked.parse(annotated), [annotated]);
+  const [editing, setEditing] = useState(false);
+  const rev = useRev();
+  const { html: annotated } = useMemo(() => annotateCodes(card.answerMarkdown), [card, rev]);
+  const html = useMemo(() => marked.parse(annotated), [annotated, rev]);
 
   // 事件委托：点击编号徽章弹出面板
   function onBodyClick(e) {
@@ -35,12 +39,24 @@ export default function CardBack({ card, onNextReviewPreview, onFlipBack }) {
       )}
       <div class="md-body" onClick={onBodyClick} dangerouslySetInnerHTML={{ __html: html }} />
       <div class="mt-4 flex items-center justify-between gap-2 flex-wrap">
-        <button
-          onClick={copyVerify}
-          class="px-3 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-sm min-h-[44px]"
-        >
-          📋 复制查证模板
-        </button>
+        <div class="flex gap-2 flex-wrap">
+          <button
+            onClick={copyVerify}
+            class="px-3 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-sm min-h-[44px]"
+          >
+            📋 复制查证模板
+          </button>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setEditing(true);
+            }}
+            class="px-3 py-2 rounded-lg bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-sm min-h-[44px]"
+            title="编辑此卡内容"
+          >
+            ✏️ 编辑
+          </button>
+        </div>
         {onFlipBack && (
           <button
             onClick={(e) => {
@@ -55,6 +71,7 @@ export default function CardBack({ card, onNextReviewPreview, onFlipBack }) {
         {onNextReviewPreview && <span class="text-xs text-gray-400">{onNextReviewPreview}</span>}
       </div>
       {refCode && <RefModal code={refCode} onClose={() => setRefCode(null)} />}
+      {editing && <CardEditor card={card} onClose={() => setEditing(false)} />}
     </div>
   );
 }

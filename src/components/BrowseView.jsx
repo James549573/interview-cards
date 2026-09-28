@@ -3,12 +3,16 @@ import { CARDS, CHAPTERS, CHAPTER_MAP } from '../lib/cards';
 import { todayStats, upcomingDays, newProgress } from '../lib/srs';
 import { marked } from 'marked';
 import { annotateCodes } from '../lib/codes';
+import { useRev } from '../lib/cardEdits';
 import RefModal from './RefModal.jsx';
+import CardEditor from './CardEditor.jsx';
 
 export default function BrowseView({ filter, setFilter }) {
   const [query, setQuery] = useState('');
   const [expanded, setExpanded] = useState(null);
   const [refCode, setRefCode] = useState(null);
+  const [editing, setEditing] = useState(null);
+  const rev = useRev();
 
   const shown = useMemo(() => {
     let out = CARDS;
@@ -26,7 +30,8 @@ export default function BrowseView({ filter, setFilter }) {
       );
     }
     return out;
-  }, [filter, query]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filter, query, rev]);
 
   function onBodyClick(e) {
     const badge = e.target.closest('.ref-badge');
@@ -98,25 +103,40 @@ export default function BrowseView({ filter, setFilter }) {
               <span class="px-2 py-0.5 rounded-full bg-blue-600 text-white text-xs font-mono shrink-0">{c.id}</span>
               <span class="font-medium text-sm flex-1">{c.title}</span>
               {c.redline && <span class="px-1.5 py-0.5 rounded bg-red-600 text-white text-xs shrink-0">红线</span>}
+              {c._edited && <span class="px-1.5 py-0.5 rounded bg-amber-500 text-white text-xs shrink-0">已修改</span>}
               {c.tier === 'B' && <span class="px-1.5 py-0.5 rounded bg-amber-500 text-white text-xs shrink-0">索引卡</span>}
               {c.tags.map((t) => (
                 <span key={t} class="px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-700 text-xs text-gray-500 dark:text-gray-300 shrink-0">
                   {t}
                 </span>
               ))}
+              <span
+                role="button"
+                tabIndex="0"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setEditing(c.id);
+                }}
+                class="px-1.5 py-1 rounded text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-gray-100 dark:hover:bg-gray-700 text-sm shrink-0 cursor-pointer"
+                title="编辑此卡内容"
+              >
+                ✏️
+              </span>
             </button>
             {expanded === c.id && <ExpandedBody card={c} onBodyClick={onBodyClick} />}
           </div>
         ))}
       </div>
+      {editing && <CardEditor card={CARDS.find((c) => c.id === editing)} onClose={() => setEditing(null)} />}
       {refCode && <RefModal code={refCode} onClose={() => setRefCode(null)} />}
     </div>
   );
 }
 
 function ExpandedBody({ card, onBodyClick }) {
-  const { html: annotated } = useMemo(() => annotateCodes(card.answerMarkdown), [card]);
-  const html = useMemo(() => marked.parse(annotated), [annotated]);
+  const rev = useRev();
+  const { html: annotated } = useMemo(() => annotateCodes(card.answerMarkdown), [card, rev]);
+  const html = useMemo(() => marked.parse(annotated), [annotated, rev]);
   return (
     <div class="px-4 pb-4">
       {card.memoryHook && (

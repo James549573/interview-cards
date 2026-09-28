@@ -105,6 +105,17 @@ export function mergeProgress(local, remote) {
     }
   }
   result.customNotes = customNotes;
+  // 卡片内容修改：同 customNotes 的合并语义，按 updatedAt 取新
+  const le2 = (local && local.cardEdits) || {};
+  const rn2 = (remote && remote.cardEdits) || {};
+  const cardEdits = { ...rn2 };
+  for (const [id, e] of Object.entries(le2)) {
+    const r = cardEdits[id];
+    if (!r || (e.updatedAt || 0) > (r.updatedAt || 0)) {
+      cardEdits[id] = e;
+    }
+  }
+  result.cardEdits = cardEdits;
   return result;
 }
 
