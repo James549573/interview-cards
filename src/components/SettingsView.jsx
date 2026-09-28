@@ -1,7 +1,7 @@
 import { useRef } from 'preact/hooks';
 import { mergeProgress } from '../lib/github';
 import { GENERATED_AT } from '../lib/cards';
-import { getEdits, resetAllEdits } from '../lib/cardEdits';
+import { getEdits, resetAllEdits, staleCount } from '../lib/cardEdits';
 
 export default function SettingsView({ theme, setTheme, progress, onImport, onClearLocal, onLogout }) {
   const fileRef = useRef(null);
@@ -109,7 +109,13 @@ export default function SettingsView({ theme, setTheme, progress, onImport, onCl
         <h3 class="font-bold mb-3">内容修改</h3>
         <p class="text-xs text-gray-400 mb-3">
           在浏览页或复习卡上点 ✏️ 可直接修改卡片内容，修改保存在你账号的 Gist 里并自动同步到所有登录设备。
-          当前已修改 <b class="text-gray-700 dark:text-gray-200">{Object.keys(getEdits()).length}</b> 张卡。
+          当前已修改 <b class="text-gray-700 dark:text-gray-200">{Object.keys(getEdits()).length}</b> 张卡
+          {staleCount() > 0 && (
+            <>
+              ，其中 <b class="text-rose-600 dark:text-rose-400">{staleCount()}</b> 张的数据源已更新（修改基于旧版原文，编辑器内可对照新版重审）
+            </>
+          )}
+          。
         </p>
         <div class="flex flex-wrap gap-2">
           <button onClick={exportEdits} class="px-3 py-2 rounded-lg bg-gray-100 dark:bg-gray-700 text-sm min-h-[44px]">

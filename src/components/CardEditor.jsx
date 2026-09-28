@@ -1,18 +1,29 @@
 // 卡片内容编辑器（模态）：编辑标题 / 记忆钩子 / 正文（Markdown 源码）
 import { useState } from 'preact/hooks';
-import { saveEdit, resetEdit, getEdit, getPristine } from '../lib/cardEdits';
+import { saveEdit, resetEdit, getEdit, getPristine, isStale } from '../lib/cardEdits';
 
 export default function CardEditor({ card, onClose }) {
   const edit = getEdit(card.id);
   const p = getPristine(card.id);
+  const stale = isStale(card.id);
   const [title, setTitle] = useState(card.title);
   const [memoryHook, setMemoryHook] = useState(card.memoryHook || '');
   const [answer, setAnswer] = useState(card.answerMarkdown);
+  const [showNew, setShowNew] = useState(false);
 
   function save() {
     saveEdit(card.id, { title, memoryHook, answerMarkdown: answer });
     alert('已保存，将自动同步到云端（Gist）');
     onClose();
+  }
+
+  function rebase() {
+    if (!confirm('放弃当前修改，改用新版原文重新编辑？')) return;
+    resetEdit(card.id);
+    setTitle(p.title);
+    setMemoryHook(p.memoryHook || '');
+    setAnswer(p.answerMarkdown);
+    setShowNew(false);
   }
 
   function restore() {
@@ -41,6 +52,28 @@ export default function CardEditor({ card, onClose }) {
           </button>
         </div>
         <div class="px-5 pb-5 space-y-3">
+          {stale && (
+            <div class="border-l-4 border-amber-500 bg-amber-500/10 px-3 py-2 rounded-r text-sm">
+              <div class="font-semibold text-amber-600 dark:text-amber-400 mb-1">⚠ 数据源已更新</div>
+              <div class="text-gray-600 dark:text-gray-300">
+                这张卡的线上原版在你上次修改之后更新过，你的修改基于旧版原文。你的修改不会被覆盖，可选择：
+              </div>
+              <div class="flex flex-wrap gap-2 mt-2">
+                <button onClick={rebase} class="px-3 py-1.5 rounded-lg bg-amber-500 text-white text-xs">
+                  改用新版原文重新编辑
+                </button>
+                <button
+                  onClick={() => setShowNew(!showNew)}
+                  class="px-3 py-1.5 rounded-lg bg-gray-200 dark:bg-gray-700 text-xs"
+                >
+                  {showNew ? '收起新版原文' : '查看新版原文'}
+                </button>
+              </div>
+              {showNew && (
+                <pre class="mt-2 p-2 rounded bg-gray-100 dark:bg-gray-900 text-xs whitespace-pre-wrap max-h-48 overflow-y-auto">{p.answerMarkdown}</pre>
+              )}
+            </div>
+          )}
           <div>
             <label class="text-xs text-gray-500 dark:text-gray-400 mb-1 block">标题</label>
             <input

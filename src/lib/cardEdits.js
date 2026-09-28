@@ -14,7 +14,26 @@ const pristine = new Map(
   CARDS.map((c) => [c.id, { title: c.title, answerMarkdown: c.answerMarkdown, memoryHook: c.memoryHook }])
 );
 
+// ---- 数据源更新检测 ----
+// 保存修改时记录当时原版的指纹 baseHash；每次数据加载后与当前原版指纹比对，
+// 不一致说明数据源（cards.json）更新过 → 标记 stale，提示用户重审，绝不静默覆盖用户修改。
+function hashStr(s) {
+  let h = 5381;
+  for (let i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) >>> 0;
+  return h.toString(36);
+}
+const pristineHash = new Map(
+  [...pristine.entries()].map(([id, p]) => [id, hashStr(`${p.title}\u0000${p.memoryHook || ''}\u0000${p.answerMarkdown}`)])
+);
+const staleSet = new Set();
+
+function hasSourceUpdate(entry, id) {
+  if (!entry || !entry.baseHash) return false;
+  return entry.baseHash !== pristineHash.get(id);
+}
+
 function applyToCards(edits) {
+  staleSet.clear();
   for (const c of CARDS) {
     const e = edits[c.id];
     const p = pristine.get(c.id);
@@ -23,6 +42,7 @@ function applyToCards(edits) {
       c.answerMarkdown = e.data.answerMarkdown != null ? e.data.answerMarkdown : p.answerMarkdown;
       c.memoryHook = e.data.memoryHook != null ? e.data.memoryHook : p.memoryHook;
       c._edited = true;
+      if (hasSourceUpdate(e, c.id)) staleSet.add(c.id);
     } else if (c._edited) {
       c.title = p.title;
       c.answerMarkdown = p.answerMarkdown;
@@ -48,6 +68,16 @@ export function getEdit(id) {
   return cache[id] || null;
 }
 
+/** 该卡的修改是否基于旧版原文（数据源已更新过） */
+export function isStale(id) {
+  return staleSet.has(id);
+}
+
+/** 基于旧版原文的修改数量 */
+export function staleCount() {
+  return staleSet.size;
+}
+
 export function getPristine(id) {
   return pristine.get(id) || null;
 }
@@ -62,7 +92,7 @@ export function saveEdit(id, data) {
   if (data.title != null) clean.title = String(data.title).trim();
   if (data.memoryHook != null) clean.memoryHook = String(data.memoryHook).trim();
   if (data.answerMarkdown != null) clean.answerMarkdown = String(data.answerMarkdown);
-  const entry = { data: clean, updatedAt: Date.now() };
+  const entry = { data: clean, baseHash: pristineHash.get(id), updatedAt: Date.now() };
   cache = { ...cache, [id]: entry };
   applyToCards(cache);
   changeListeners.forEach((fn) => fn({ type: 'save', id, entry }));

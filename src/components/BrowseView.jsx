@@ -3,7 +3,7 @@ import { CARDS, CHAPTERS, CHAPTER_MAP } from '../lib/cards';
 import { todayStats, upcomingDays, newProgress } from '../lib/srs';
 import { marked } from 'marked';
 import { annotateCodes } from '../lib/codes';
-import { useRev } from '../lib/cardEdits';
+import { useRev, isStale } from '../lib/cardEdits';
 import RefModal from './RefModal.jsx';
 import CardEditor from './CardEditor.jsx';
 
@@ -104,6 +104,7 @@ export default function BrowseView({ filter, setFilter }) {
               <span class="font-medium text-sm flex-1">{c.title}</span>
               {c.redline && <span class="px-1.5 py-0.5 rounded bg-red-600 text-white text-xs shrink-0">红线</span>}
               {c._edited && <span class="px-1.5 py-0.5 rounded bg-amber-500 text-white text-xs shrink-0">已修改</span>}
+              {isStale(c.id) && <span class="px-1.5 py-0.5 rounded bg-rose-600 text-white text-xs shrink-0">源已更新</span>}
               {c.tier === 'B' && <span class="px-1.5 py-0.5 rounded bg-amber-500 text-white text-xs shrink-0">索引卡</span>}
               {c.tags.map((t) => (
                 <span key={t} class="px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-700 text-xs text-gray-500 dark:text-gray-300 shrink-0">
