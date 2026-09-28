@@ -30,16 +30,11 @@ export function annotateCodes(md) {
     return `\u0000P${protected_.length - 1}\u0000`;
   });
   const unknown = [];
-  const seenUnknown = new Set();
   src = src.replace(CODE_RE, (code) => {
     const entry = lookupCode(code);
     if (!entry) {
-      if (!seenUnknown.has(code)) {
-        seenUnknown.add(code);
-        unknown.push(code);
-        console.warn('[Ref] 未收录编号:', code);
-      }
-      return `<span class="ref-badge ref-missing" data-code="${code}" title="编号未收录">${code}⚠</span>`;
+      // 内容源换成复盘手册后，未收录编号静默保持原样（不显示 ⚠ 徽章）
+      return code;
     }
     const name = entry.name || '名称未定义';
     return `<button class="ref-badge" data-code="${code}" data-name="${name.replace(/"/g, '&quot;')}" type="button">${code}</button>`;
