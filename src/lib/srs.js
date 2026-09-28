@@ -29,6 +29,15 @@ export function newProgress(now = Date.now()) {
   };
 }
 
+/** 当日 key（用于「同一张卡每天最多 3 次没记住」的日计数） */
+export function dayKey(ts = Date.now()) {
+  const d = new Date(ts);
+  return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
+}
+
+/** 同一张卡一个自然日内「没记住」（模糊/没记住合计）的最大确认次数，达到即排到明天 */
+export const DAILY_FAIL_LIMIT = 3;
+
 /**
  * 应用反馈，返回新的进度对象（不修改原对象）
  * @param {'known'|'fuzzy'|'forgotten'} feedback
@@ -40,6 +49,9 @@ export function applyFeedback(prev, feedback, now = Date.now()) {
     p.status = 'known';
     p.nextReview = now + INTERVALS[p.stage] * 1000;
     p.correctStreak = (p.correctStreak || 0) + 1;
+    p.failDay = null;
+    p.failCount = 0;
+    p.dailyDeferred = false;
   } else if (feedback === 'fuzzy') {
     p.stage = Math.max(1, (p.stage || 0) - 1);
     p.status = 'fuzzy';
@@ -51,6 +63,24 @@ export function applyFeedback(prev, feedback, now = Date.now()) {
     p.nextReview = now + 5 * 60 * 1000;
     p.lapses = (p.lapses || 0) + 1;
     p.correctStreak = 0;
+  }
+  if (feedback !== 'known') {
+    // 每日失败计数：当天第 3 次没记住 → 不再当天反复确认，直接排到明天 00:00
+    const dk = dayKey(now);
+    if (p.failDay !== dk) {
+      p.failDay = dk;
+      p.failCount = 0;
+    }
+    p.failCount = (p.failCount || 0) + 1;
+    if (p.failCount >= DAILY_FAIL_LIMIT) {
+      const t = new Date(now);
+      t.setDate(t.getDate() + 1);
+      t.setHours(0, 0, 0, 0);
+      p.nextReview = t.getTime();
+      p.dailyDeferred = true;
+    } else {
+      p.dailyDeferred = false;
+    }
   }
   p.reviews = (p.reviews || 0) + 1;
   p.lastReview = now;
