@@ -45,7 +45,10 @@ export const DAILY_FAIL_LIMIT = 3;
 export function applyFeedback(prev, feedback, now = Date.now()) {
   const p = { ...prev };
   if (feedback === 'known') {
-    p.stage = Math.min((p.stage || 0) + 1, INTERVALS.length - 1);
+    // 分钟档（新卡/5分钟/30分钟）点「记住」跳两级：新卡→30分钟、30分钟→次日，
+    // 当天最多再见一次；进入小时/天级档位后恢复正常逐级升级（艾宾浩斯后段节奏）
+    const jump = (p.stage || 0) <= 2 ? 2 : 1;
+    p.stage = Math.min((p.stage || 0) + jump, INTERVALS.length - 1);
     p.status = 'known';
     p.nextReview = now + INTERVALS[p.stage] * 1000;
     p.correctStreak = (p.correctStreak || 0) + 1;
